@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /*
  * Copyright (c) Mike Lischke. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
@@ -10,10 +8,11 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
+import type { CustomImportResolver  } from "./PackageSourceManager.js";
 import {
     IClassResolver, IConverterConfiguration, IConverterOptions, ISourceMapping, JavaToTypescriptConverter,
-} from "../src/conversion/JavaToTypeScript.js";
-import { IMemberOrderOptions } from "../src/conversion/MemberOrdering.js";
+} from "./conversion/JavaToTypeScript.js";
+import { IMemberOrderOptions } from "./conversion/MemberOrdering.js";
 
 const args = process.argv.slice(2);
 
@@ -22,10 +21,14 @@ if (args.length < 1) {
     process.exit(1);
 }
 
+console.log('...')
+
 console.log("\nConverting Java to TypeScript...\n");
 
 // Load the given configuration file and create a converter configuration from it.
 const configFile = args[0];
+
+const configDir =path.resolve(path.dirname(configFile))
 const content = await fs.readFile(configFile, { encoding: "utf-8" });
 const json = JSON.parse(content);
 
@@ -43,6 +46,7 @@ if ("options" in json) {
     }
 
     options = {
+        configDir,
         prefix: json.options.prefix as string,
         convertAnnotations: json.options.convertAnnotations as boolean,
         preferArrowFunctions: json.options.preferArrowFunctions as boolean,
@@ -53,7 +57,7 @@ if ("options" in json) {
         memberOrderOptions: json.options.memberOrderOptions as IMemberOrderOptions,
         addIndexFiles: json.options.addIndexFiles as boolean,
         sourceMappings: json.options.sourceMappings as ISourceMapping[],
-        // importResolver?: CustomImportResolver;
+        importResolver: json.options.importResolver as string,
         classResolver,
     };
 
@@ -82,7 +86,7 @@ if (rawReplace) {
 const config: IConverterConfiguration = {
     packageRoot: json.packageRoot as string,
     outputPath: json.outputPath as string,
-
+    configDir,
     javaLib: json.javaLib as string,
     include: json.include as string[],
     exclude: json.exclude as string[],
@@ -108,3 +112,4 @@ config.outputPath = path.resolve(process.cwd(), config.outputPath);
 console.log(config);
 const converter = new JavaToTypescriptConverter(config);
 await converter.startConversion();
+console.log('hi')

@@ -1,0 +1,24 @@
+{
+  "packageRoot": "/Users/ede/dev/github/ahum/gwt-experiment/samples/hello/src",
+  "outputPath": "ts-out",
+  "dependencies": [
+    {
+      "name": "gwt-user",
+      "version": "2.10.0",
+      "sourcePath": "../../user/src"
+    }
+  ],
+  "options": {
+    "sourceRoots": [
+      "src/com/google/gwt/sample/hello/client"
+    ],
+    "importResolver": "./importResolver.js",
+    "includeFiles": [
+      "**/*.java"
+    ],
+    "excludeFiles": [
+      "**/package-info.java",
+      "**/test/**"
+    ]
+  }
+}

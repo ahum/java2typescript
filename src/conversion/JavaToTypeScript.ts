@@ -35,6 +35,9 @@ export interface ISourceMapping {
 export type ConverterOptionsPrefixFunc = (sourcePath: string, targetPath?: string) => string;
 
 export interface IConverterOptions {
+
+    configDir: string;
+
     /** Anything to go before the first code line (e.g. linter settings). */
     prefix?: ConverterOptionsPrefixFunc | string;
 
@@ -98,10 +101,10 @@ export interface IConverterOptions {
     sourceMappings?: ISourceMapping[];
 
     /**
-     * A function that takes a package ID and returns a package source for it. Used usually to provide hard coded
+     * A path to a module that contains a function that takes a package ID and returns a package source for it. Used usually to provide hard coded
      * symbol information for packages/modules for which no Java source code is available.
      */
-    importResolver?: CustomImportResolver;
+    importResolver?: string; //CustomImportResolver;
 
     /**
      * A map that provides an import string for a given class name. Names given here do not use qualifiers, but
@@ -145,6 +148,7 @@ export interface IDebugOptions {
 }
 
 export interface IConverterConfiguration {
+    configDir: string;
     /**
      * The root folder of the package to convert. Only files in the file tree are automatically resolved
      * when importing symbols.
@@ -199,7 +203,7 @@ export interface IConverterConfiguration {
 }
 
 export class JavaToTypescriptConverter {
-    public constructor(private configuration: IConverterConfiguration) {
+    public constructor(protected configuration: IConverterConfiguration) {
         let javaLib;
         if (configuration.javaLib === undefined) {
             javaLib = "jree"; // Use the jree node module as default.
@@ -210,18 +214,47 @@ export class JavaToTypescriptConverter {
             javaLib = path.resolve(configuration.outputPath, configuration.javaLib);
         }
 
-        PackageSourceManager.configure(javaLib, configuration.options?.importResolver);
-
-        configuration.packageRoot = path.resolve(configuration.packageRoot);
-
-        // Convert all prefix field variants to a function, so we don't have to test this again later.
-        if (configuration.options?.prefix) {
-            const prefix = configuration.options.prefix;
-            configuration.options.prefix = typeof prefix === "function" ? prefix : () => { return prefix ?? ""; };
-        }
     }
 
     public async startConversion(): Promise<void> {
+
+        let javaLib;
+        if (this.configuration.javaLib === undefined) {
+            javaLib = "jree"; // Use the jree node module as default.
+        } else if (this.configuration.javaLib.indexOf("/") < 0) {
+            javaLib = this.configuration.javaLib; // Assume this is another node module.
+        } else {
+            // It's a path, so resolve it relative to the output path.
+            javaLib = path.resolve(this.configuration.outputPath, this.configuration.javaLib);
+        }
+
+        const loadModule = async () : Promise<CustomImportResolver | undefined> => {
+            const importResolverPath = this.configuration.options?.importResolver;
+            if(!importResolverPath) {
+                return Promise.resolve(undefined);
+            }
+            console.log('configDir', this.configuration.configDir);
+            console.log('importResolverPath', importResolverPath);
+            const fullPath = path.resolve(this.configuration.configDir, importResolverPath);
+            console.log('fullPath', fullPath);
+            const s = fs.statSync(fullPath);
+            console.log('s', s);
+            const module = await import(fullPath);
+            console.log('module', module);
+            return Promise.resolve(module.default);
+        }
+
+        const module = await loadModule(); 
+        console.log('module', module);
+        PackageSourceManager.configure(javaLib, module);
+
+        this.configuration.packageRoot = path.resolve(this.configuration.packageRoot);
+        // >>> TODO(Ed): Need to convert any imports too if they are resolved.
+        // Convert all prefix field variants to a function, so we don't have to test this again later.
+        if (this.configuration.options?.prefix) {
+            const prefix = this.configuration.options.prefix;
+            this.configuration.options.prefix = typeof prefix === "function" ? prefix : () => { return prefix ?? ""; };
+        }
         const currentDir = process.cwd();
 
         // Only the files in this list are converted.
