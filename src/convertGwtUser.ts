@@ -54,18 +54,26 @@ const memberOrderOptions = {
   ],
 };
 
+/**
+ * TODO:
+ * set up a workflow here so I can run :
+ *
+ * pnpm tsx src/convertGwtUser.ts --include DOMEvent --include ...
+ *
+ * And it'll only update those java files. So I can fix the issues here
+ * And check the output
+ */
 const convert = async () => {
   const options: IConverterConfiguration = {
-    // packageRoot: path.resolve(process.cwd(), "../gwt-experiment/user/src"),
-    // packageRoot: path.resolve(process.cwd(), "../gwt-experiment/user/src"),
-    packageRoot: path.resolve(
-      process.cwd(),
-      "../gwt-experiment/user/src/com/google/gwt/event/dom/client"
-    ),
+    packageRoot: path.resolve(process.cwd(), "../gwt-experiment/user/src"),
+    // packageRoot: path.resolve(
+    //   process.cwd(),
+    //   "../gwt-experiment/user/src/com/google/gwt/event/dom/client"
+    // ),
     include,
     exclude: [],
     // outputPath: "../gwt-ts/user-ts-tester/",
-    outputPath: "../gwt-ts/user-ts-tester/",
+    outputPath: "../gwt-ts/user-ts/",
     options: {
       importResolver,
       convertAnnotations: true,
