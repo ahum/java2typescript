@@ -86,6 +86,124 @@ function compareAsts(
   return areNodesEqual(sourceFile1, sourceFile2);
 }
 
+/**
+ * Generates a diff between two TypeScript ASTs and returns a string representation
+ * of the differences.
+ * @param sourceFile1 First source file
+ * @param sourceFile2 Second source file
+ * @returns A string containing the differences between the ASTs
+ */
+function diffAsts(
+  sourceFile1: ts.SourceFile,
+  sourceFile2: ts.SourceFile
+): string {
+  const differences: string[] = [];
+  
+  function getNodePath(node: ts.Node): string {
+    const parts: string[] = [];
+    let current: ts.Node | undefined = node;
+    
+    while (current) {
+      let name = ts.SyntaxKind[current.kind];
+      
+      // Add more specific information for certain node types
+      if (ts.isIdentifier(current)) {
+        name += ` (${current.text})`;
+      } else if (ts.isPropertyDeclaration(current)) {
+        const propName = current.name.getText();
+        name += ` (${propName})`;
+      } else if (ts.isMethodDeclaration(current)) {
+        const methodName = current.name.getText();
+        name += ` (${methodName})`;
+      } else if (ts.isClassDeclaration(current) && current.name) {
+        name += ` (${current.name.text})`;
+      }
+      
+      parts.unshift(name);
+      current = current.parent;
+    }
+    
+    return parts.join(" > ");
+  }
+  
+  function compareNodes(node1: ts.Node, node2: ts.Node, path: string = ""): void {
+    // Check if node kinds are the same
+    if (node1.kind !== node2.kind) {
+      differences.push(`Different node kinds at ${path}:`);
+      differences.push(`  Expected: ${ts.SyntaxKind[node1.kind]}`);
+      differences.push(`  Actual: ${ts.SyntaxKind[node2.kind]}`);
+      return;
+    }
+    
+    // Compare specific node properties based on kind
+    switch (node1.kind) {
+      case ts.SyntaxKind.Identifier:
+        const id1 = node1 as ts.Identifier;
+        const id2 = node2 as ts.Identifier;
+        if (id1.text !== id2.text) {
+          differences.push(`Different identifier text at ${path}:`);
+          differences.push(`  Expected: "${id1.text}"`);
+          differences.push(`  Actual: "${id2.text}"`);
+        }
+        break;
+        
+      case ts.SyntaxKind.StringLiteral:
+      case ts.SyntaxKind.NumericLiteral:
+        const lit1 = node1 as ts.LiteralExpression;
+        const lit2 = node2 as ts.LiteralExpression;
+        if (lit1.text !== lit2.text) {
+          differences.push(`Different literal value at ${path}:`);
+          differences.push(`  Expected: "${lit1.text}"`);
+          differences.push(`  Actual: "${lit2.text}"`);
+        }
+        break;
+        
+      case ts.SyntaxKind.PropertyDeclaration:
+        const prop1 = node1 as ts.PropertyDeclaration;
+        const prop2 = node2 as ts.PropertyDeclaration;
+        
+        // Compare property names
+        compareNodes(prop1.name, prop2.name, `${path} > name`);
+        
+        // Compare property types if they exist
+        if (prop1.type && prop2.type) {
+          compareNodes(prop1.type, prop2.type, `${path} > type`);
+        } else if (prop1.type || prop2.type) {
+          differences.push(`Property type mismatch at ${path}:`);
+          differences.push(`  Expected: ${prop1.type ? "has type" : "no type"}`);
+          differences.push(`  Actual: ${prop2.type ? "has type" : "no type"}`);
+        }
+        break;
+    }
+    
+    // Compare children recursively
+    const children1 = Array.from(node1.getChildren(sourceFile1));
+    const children2 = Array.from(node2.getChildren(sourceFile2));
+    
+    if (children1.length !== children2.length) {
+      differences.push(`Different number of children at ${path}:`);
+      differences.push(`  Expected: ${children1.length} children`);
+      differences.push(`  Actual: ${children2.length} children`);
+      
+      // Try to match as many children as possible
+      const minLength = Math.min(children1.length, children2.length);
+      for (let i = 0; i < minLength; i++) {
+        compareNodes(children1[i], children2[i], `${path} > child[${i}]`);
+      }
+    } else {
+      // Same number of children, compare each one
+      for (let i = 0; i < children1.length; i++) {
+        compareNodes(children1[i], children2[i], `${path} > child[${i}]`);
+      }
+    }
+  }
+  
+  // Start comparison from the root
+  compareNodes(sourceFile1, sourceFile2, getNodePath(sourceFile1));
+  
+  return differences.join("\n");
+}
+
 describe("Fixtures Tests", () => {
   const testDir = path.join(process.cwd(), "tests");
   const fixturesDir = path.join(testDir, "conversion", "fixtures");
@@ -177,6 +295,14 @@ describe("Fixtures Tests", () => {
 
       // Compare ASTs
       const astsEqual = compareAsts(generatedSourceFile, expectedSourceFile);
+      
+      if (!astsEqual) {
+        // Generate and log the AST differences
+        const differences = diffAsts(expectedSourceFile, generatedSourceFile);
+        console.log(`AST differences for ${baseName}:`);
+        console.log(differences);
+      }
+      
       expect(astsEqual).toBe(true);
     }
   });
