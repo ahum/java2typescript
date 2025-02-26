@@ -1,31 +1,24 @@
 {
-    "compilerOptions": {
-        "moduleResolution": "NodeNext",
-        "target": "ES2022",
-        "module": "NodeNext",
-        "outDir": "./output",
-        "noEmit": true,
-        "sourceMap": true,
-        "esModuleInterop": true,
-        "isolatedModules": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "noImplicitOverride": false,
-        "strictNullChecks": true,
-        "strictPropertyInitialization": true,
-        "rootDirs": [
-            "src",
-        ]
-    },
-    "include": [
-        "**/*.spec.ts",
-        "jest.config.ts"
-    ],
-    "exclude": [
-        "node_modules/**/*.*",
-        "output/**/*.*"
-    ],
-    "ts-node": {
-        "esm": true,
-    }
+  "compilerOptions": {
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "outDir": "./output",
+    "noEmit": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": false,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "rootDirs": ["src"],
+    "allowJs": true
+  },
+  "include": ["**/*.spec.ts", "jest.config.ts", "ignore.ts"],
+  "exclude": ["node_modules/**/*.*", "output/**/*.*"],
+  "ts-node": {
+    "esm": true
+  }
 }

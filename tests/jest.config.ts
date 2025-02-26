@@ -82,7 +82,11 @@ const config: JestConfigWithTsJest = {
     // globalTeardown: "./src/tests/globalTearDown.ts",
 
     // A set of global variables that need to be available in all test environments
-    globals: {},
+    globals: {
+        'ts-jest': {
+            useESM: false,
+        }
+    },
 
     // The maximum amount of workers used to run your tests. Can be specified as % or a number. E.g. maxWorkers:
     // 10% will use 10% of your CPU amount + 1 as the maximum worker number. maxWorkers: 2 will use a maximum of
@@ -204,12 +208,7 @@ const config: JestConfigWithTsJest = {
     // A map from regular expressions to paths to transformers
     transform: {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        "^.+\\.ts$": [
-            "ts-jest",
-            {
-                useESM: false,
-            },
-        ],
+        "^.+\\.ts$": ["ts-jest"]
     },
 
     // An array of regexp pattern strings that are matched against all source file paths, matched files will skip

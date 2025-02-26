@@ -4,3 +4,4 @@ coverage
 *.interp
 dist
 .vscode/numbered-bookmarks.json
+.aider*

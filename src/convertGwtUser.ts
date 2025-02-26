@@ -70,7 +70,7 @@ const convert = async () => {
     //   process.cwd(),
     //   "../gwt-experiment/user/src/com/google/gwt/event/dom/client"
     // ),
-    include,
+    include: ["DomEvent.java", "Button.java"],
     exclude: [],
     // outputPath: "../gwt-ts/user-ts-tester/",
     outputPath: "../gwt-ts/user-ts/",
