@@ -231,6 +231,9 @@ describe("Fixtures Tests", () => {
   beforeAll(async () => {
     // Ensure the target directory exists
     try {
+      await fs.mkdir(fixturesDir, { recursive: true });
+      await fs.mkdir(javaFixturesDir, { recursive: true });
+      await fs.mkdir(tsFixturesDir, { recursive: true });
       await fs.mkdir(targetDir, { recursive: true });
     } catch (e) {
       // Ignore if directory already exists
