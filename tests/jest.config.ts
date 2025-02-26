@@ -126,7 +126,7 @@ const config: JestConfigWithTsJest = {
     // notifyMode: "failure-change",
 
     // A preset that is used as a base for Jest's configuration
-    preset: "ts-jest/presets/default-esm",
+    preset: "ts-jest",
 
     // Run tests from one or more projects
     // projects: undefined,
@@ -207,7 +207,7 @@ const config: JestConfigWithTsJest = {
         "^.+\\.ts$": [
             "ts-jest",
             {
-                useESM: true,
+                useESM: false,
             },
         ],
     },
