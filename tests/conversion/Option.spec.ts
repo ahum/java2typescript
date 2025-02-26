@@ -6,7 +6,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 
-import { JavaToTypescriptConverter } from "../../src/conversion/JavaToTypeScript";
+import { JavaToTypescriptConverter } from "../../src/conversion/JavaToTypeScript.js";
 
 describe("Options Tests", () => {
   const testDir = path.join(process.cwd(), "tests");
