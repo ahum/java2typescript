@@ -3849,35 +3849,154 @@ export class FileProcessor {
                         `${implSignatureParams}): ${combinedReturnTypeString} {\n`);
                 }
 
-                builder.append("\t\tswitch (args.length) {\n");
-
-                // Add the body code for each overload, depending on the overload parameters.
-                overloads.forEach((overload) => {
-                    builder.append(`\t\t\tcase ${overload.signature?.length ?? 0}: {\n`);
-                    if ((overload.signature?.length ?? 0) > 0) {
-                        builder.append("\t\t\t\tconst [");
-                        let typeString = "";
-                        overload.signature?.forEach((param, index) => {
-                            if (index > 0) {
-                                builder.append(", ");
-                                typeString += ", ";
-                            }
-                            builder.append(param.name);
-                            typeString += param.type;
-                        });
-                        builder.append(`] = args as [${typeString}];\n\n`);
+                // Group overloads by parameter count
+                const overloadsByParamCount = new Map<number, ITypeMemberDetails[]>();
+                overloads.forEach(overload => {
+                    const paramCount = overload.signature?.length ?? 0;
+                    if (!overloadsByParamCount.has(paramCount)) {
+                        overloadsByParamCount.set(paramCount, []);
                     }
-
-                    let content = `${overload.bodyContent}`; // Convert to string.
-                    content = content.trim();
-                    builder.append(content.substring(1, content.length - 1)); // Remove the curly braces.
-                    builder.append(`\n\n\t\t\t\tbreak;\n\t\t\t}\n\n`);
+                    overloadsByParamCount.get(paramCount)!.push(overload);
                 });
 
-                builder.append("\t\t\tdefault: {\n\t\t\t\t");
-                builder.append("throw new java.lang.IllegalArgumentException(S`Invalid number of arguments`);\n");
-                builder.append("\t\t\t}\n");
-                builder.append("\t\t}\n");
+                // If any parameter count has multiple overloads, we need type checking
+                const needsTypeChecking = Array.from(overloadsByParamCount.values())
+                    .some(group => group.length > 1);
+
+                if (needsTypeChecking) {
+                    // We need to check both argument count and types
+                    builder.append("\t\t// Check argument count first\n");
+                    builder.append("\t\tswitch (args.length) {\n");
+
+                    // Process each parameter count group
+                    Array.from(overloadsByParamCount.entries()).forEach(([paramCount, group]) => {
+                        builder.append(`\t\t\tcase ${paramCount}: {\n`);
+                        
+                        if (group.length === 1) {
+                            // Only one overload with this parameter count, no type checking needed
+                            const overload = group[0];
+                            if (paramCount > 0) {
+                                builder.append("\t\t\t\tconst [");
+                                let typeString = "";
+                                overload.signature?.forEach((param, index) => {
+                                    if (index > 0) {
+                                        builder.append(", ");
+                                        typeString += ", ";
+                                    }
+                                    builder.append(param.name);
+                                    typeString += param.type;
+                                });
+                                builder.append(`] = args as [${typeString}];\n\n`);
+                            }
+
+                            let content = `${overload.bodyContent}`; // Convert to string.
+                            content = content.trim();
+                            builder.append(content.substring(1, content.length - 1)); // Remove the curly braces.
+                            builder.append(`\n\n\t\t\t\tbreak;\n\t\t\t}\n\n`);
+                        } else {
+                            // Multiple overloads with same parameter count, need type checking
+                            if (paramCount > 0) {
+                                // Extract parameters with generic names
+                                builder.append("\t\t\t\tconst [");
+                                for (let i = 0; i < paramCount; i++) {
+                                    if (i > 0) builder.append(", ");
+                                    builder.append(`arg${i}`);
+                                }
+                                builder.append("] = args;\n\n");
+                                
+                                // Type checking for each overload
+                                group.forEach((overload, index) => {
+                                    const conditions: string[] = [];
+                                    overload.signature?.forEach((param, paramIndex) => {
+                                        // Create appropriate type check based on parameter type
+                                        let typeCheck: string;
+                                        const paramType = param.type.toLowerCase();
+                                        
+                                        if (paramType.includes("string")) {
+                                            typeCheck = `typeof arg${paramIndex} === "string"`;
+                                        } else if (paramType.includes("number") || 
+                                                  paramType.includes("int") || 
+                                                  paramType.includes("float") || 
+                                                  paramType.includes("double")) {
+                                            typeCheck = `typeof arg${paramIndex} === "number"`;
+                                        } else if (paramType.includes("boolean")) {
+                                            typeCheck = `typeof arg${paramIndex} === "boolean"`;
+                                        } else if (paramType.includes("bigint")) {
+                                            typeCheck = `typeof arg${paramIndex} === "bigint"`;
+                                        } else if (paramType.includes("[]") || paramType.includes("array")) {
+                                            typeCheck = `Array.isArray(arg${paramIndex})`;
+                                        } else {
+                                            typeCheck = `arg${paramIndex} instanceof ${param.type.split('|')[0].trim()}`;
+                                        }
+                                        conditions.push(typeCheck);
+                                    });
+                                    
+                                    const condition = conditions.join(" && ");
+                                    const prefix = index === 0 ? "if" : "else if";
+                                    
+                                    builder.append(`\t\t\t\t${prefix} (${condition}) {\n`);
+                                    
+                                    // Map generic arg names to the specific parameter names
+                                    const paramMappings: string[] = [];
+                                    overload.signature?.forEach((param, paramIndex) => {
+                                        paramMappings.push(`const ${param.name} = arg${paramIndex} as ${param.type};`);
+                                    });
+                                    
+                                    if (paramMappings.length > 0) {
+                                        builder.append(`\t\t\t\t\t${paramMappings.join("\n\t\t\t\t\t")}\n\n`);
+                                    }
+                                    
+                                    let content = `${overload.bodyContent}`; // Convert to string.
+                                    content = content.trim();
+                                    builder.append(`\t\t\t\t\t${content.substring(1, content.length - 1).replace(/\n/g, "\n\t\t\t\t\t")}\n`);
+                                    builder.append(`\t\t\t\t}\n`);
+                                });
+                                
+                                // Add else clause for type mismatch
+                                builder.append(`\t\t\t\telse {\n`);
+                                builder.append(`\t\t\t\t\tthrow new Error("No overload matches this parameter type combination");\n`);
+                                builder.append(`\t\t\t\t}\n`);
+                            }
+                            builder.append(`\t\t\t\tbreak;\n\t\t\t}\n\n`);
+                        }
+                    });
+
+                    builder.append("\t\t\tdefault: {\n\t\t\t\t");
+                    builder.append("throw new Error(\"Invalid number of arguments\");\n");
+                    builder.append("\t\t\t}\n");
+                    builder.append("\t\t}\n");
+                } else {
+                    // Simple case: just check argument count
+                    builder.append("\t\tswitch (args.length) {\n");
+
+                    // Add the body code for each overload, depending on the overload parameters.
+                    overloads.forEach((overload) => {
+                        builder.append(`\t\t\tcase ${overload.signature?.length ?? 0}: {\n`);
+                        if ((overload.signature?.length ?? 0) > 0) {
+                            builder.append("\t\t\t\tconst [");
+                            let typeString = "";
+                            overload.signature?.forEach((param, index) => {
+                                if (index > 0) {
+                                    builder.append(", ");
+                                    typeString += ", ";
+                                }
+                                builder.append(param.name);
+                                typeString += param.type;
+                            });
+                            builder.append(`] = args as [${typeString}];\n\n`);
+                        }
+
+                        let content = `${overload.bodyContent}`; // Convert to string.
+                        content = content.trim();
+                        builder.append(content.substring(1, content.length - 1)); // Remove the curly braces.
+                        builder.append(`\n\n\t\t\t\tbreak;\n\t\t\t}\n\n`);
+                    });
+
+                    builder.append("\t\t\tdefault: {\n\t\t\t\t");
+                    builder.append("throw new Error(\"Invalid number of arguments\");\n");
+                    builder.append("\t\t\t}\n");
+                    builder.append("\t\t}\n");
+                }
                 this.registerJavaImport("S");
 
                 // Add collected instance initializer code now, if there's any.
