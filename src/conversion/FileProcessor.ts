@@ -393,7 +393,9 @@ export class FileProcessor {
                     if (createTypeAlias) {
                         if (("typeParameters" in symbol) && symbol.typeParameters) {
                             const typeParameters = symbol.typeParameters as string;
-                            aliases += `type ${symbol.name}${typeParameters} = ${key}${typeParameters};\n`;
+                            // Remove any zero-width spaces that might be in the type parameters
+                            const cleanTypeParameters = typeParameters.replace(/\u200B/g, '');
+                            aliases += `type ${symbol.name}${cleanTypeParameters} = ${key}${cleanTypeParameters};\n`;
                         } else {
                             aliases += `type ${symbol.name} = ${key};\n`;
                         }
@@ -773,11 +775,12 @@ export class FileProcessor {
 
                 let minimizedTypeParameters = temp.length > 0 ? temp.join(",") : "";
                 if (typeParameters.length > 0) {
-                    typeParameters = `<${typeParameters}>`;
+                    // Clean any zero-width spaces from type parameters
+                    typeParameters = `<${typeParameters}>`.replace(/\u200B/g, '');
                 }
 
                 if (minimizedTypeParameters.length > 0) {
-                    minimizedTypeParameters = `<${minimizedTypeParameters}>`;
+                    minimizedTypeParameters = `<${minimizedTypeParameters}>`.replace(/\u200B/g, '');
                 }
 
                 this.typeStack.peek().deferredDeclarations.append(`\texport type ${className}` +
@@ -1435,6 +1438,13 @@ export class FileProcessor {
         }
 
         this.getContent(builder, context.GT());
+        
+        // Clean any zero-width spaces that might have been introduced
+        const currentContent = builder.toString();
+        if (currentContent.includes('\u200B')) {
+            builder.clear();
+            builder.append(currentContent.replace(/\u200B/g, ''));
+        }
     };
 
     private processTypeParameter = (builder: java.lang.StringBuilder, context: TypeParameterContext): void => {
