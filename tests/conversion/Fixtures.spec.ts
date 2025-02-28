@@ -148,6 +148,9 @@ function diffAsts(
       differences.push(`Different node kinds at ${path}:`);
       differences.push(`  Expected: ${ts.SyntaxKind[node1.kind]}`);
       differences.push(`  Actual: ${ts.SyntaxKind[node2.kind]}`);
+      differences.push(`expected: ${node1.getFullText()}`);
+      differences.push(`actual: ${node2.getFullText()}`);
+      differences.push("--");
 
       return;
     }
@@ -203,6 +206,20 @@ function diffAsts(
       differences.push(`Different number of children at ${path}:`);
       differences.push(`  Expected: ${children1.length} children`);
       differences.push(`  Actual: ${children2.length} children`);
+      differences.push(
+        `expected: ${children1
+          .map((c) => {
+            return c.getFullText();
+          })
+          .join("\n")}`
+      );
+      differences.push(
+        `actual: ${children2
+          .map((c) => {
+            return c.getFullText();
+          })
+          .join("\n")}`
+      );
 
       // Try to match as many children as possible
       const minLength = Math.min(children1.length, children2.length);
@@ -277,6 +294,8 @@ describe("Fixtures Tests", () => {
   const files = [
     "./tests/conversion/fixtures/java/One.java",
     "./tests/conversion/fixtures/java/OverloadTest.java",
+    "./tests/conversion/fixtures/java/PrivateObject.java",
+    "./tests/conversion/fixtures/java/RootPanel.java",
   ];
 
   test.each(files)("Converts %s correctly", async (javaFile) => {
@@ -289,15 +308,15 @@ describe("Fixtures Tests", () => {
     try {
       await fs.access(expectedTsPath);
     } catch (e) {
-      throw new Error(
-        `Expected TypeScript fixture not found: ${expectedTsPath}`
-      );
+      // create empty file
+      await fs.writeFile(expectedTsPath, "");
     }
 
     // Read files
     const generatedContent = (
       await fs.readFile(generatedTsPath, "utf8")
     ).trim();
+
     const expectedContent = (await fs.readFile(expectedTsPath, "utf8")).trim();
     console.log("generated:", generatedTsPath);
     console.log("expected:", expectedTsPath);
