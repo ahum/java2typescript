@@ -1,4 +1,17 @@
 export class OverloadTest {
+    // Custom class for testing complex type overloads
+    public static class DataContainer {
+        private  unknown;
+        
+        constructor( unknown) {
+            this.data = data;
+        }
+        
+        public getData(): unknown {
+            return this.data;
+        }
+    }
+    
     // Overloaded methods with same parameter count but different types
     public process(text: string): void;
     public process(number: number): void;
@@ -7,6 +20,19 @@ export class OverloadTest {
             console.log("Processing text: " + arg);
         } else if (typeof arg === "number") {
             console.log("Processing number: " + arg);
+        } else {
+            throw new Error("Invalid argument type");
+        }
+    }
+    
+    // Complex type overloads with same parameter count
+    public handle(container: OverloadTest.DataContainer): void;
+    public handle(obj: object): void;
+    public handle(arg: unknown): void {
+        if (arg instanceof OverloadTest.DataContainer) {
+            console.log("Handling data container: " + arg.getData());
+        } else if (typeof arg === "object" && arg !== null) {
+            console.log("Handling generic object: " + arg);
         } else {
             throw new Error("Invalid argument type");
         }

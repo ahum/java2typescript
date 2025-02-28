@@ -3925,8 +3925,15 @@ export class FileProcessor {
                                             typeCheck = `typeof arg${paramIndex} === "bigint"`;
                                         } else if (paramType.includes("[]") || paramType.includes("array")) {
                                             typeCheck = `Array.isArray(arg${paramIndex})`;
+                                        } else if (paramType.includes("object")) {
+                                            typeCheck = `typeof arg${paramIndex} === "object" && arg${paramIndex} !== null`;
+                                        } else if (paramType.includes("any") || paramType.includes("unknown")) {
+                                            typeCheck = `true /* any type */`;
                                         } else {
-                                            typeCheck = `arg${paramIndex} instanceof ${param.type.split('|')[0].trim()}`;
+                                            // For complex types, try instanceof check but handle potential errors
+                                            typeCheck = `(typeof arg${paramIndex} === "object" && arg${paramIndex} !== null && ` +
+                                                       `(function() { try { return arg${paramIndex} instanceof ${param.type.split('|')[0].trim()}; } ` +
+                                                       `catch(e) { return false; } })())`;
                                         }
                                         conditions.push(typeCheck);
                                     });
