@@ -1,6 +1,6 @@
 export class OverloadTest {
     // Custom class for testing complex type overloads
-    public static class DataContainer {
+    public static DataContainer = class {
         private  unknown;
         
         constructor( unknown) {
@@ -10,31 +10,63 @@ export class OverloadTest {
         public getData(): unknown {
             return this.data;
         }
-    }
+    };
     
     // Overloaded methods with same parameter count but different types
     public process(text: string): void;
     public process(number: number): void;
-    public process(arg: unknown): void {
-        if (typeof arg === "string") {
-            console.log("Processing text: " + arg);
-        } else if (typeof arg === "number") {
-            console.log("Processing number: " + arg);
-        } else {
-            throw new Error("Invalid argument type");
+    public process(...args: unknown[]): void {
+        // Check argument count first
+        switch (args.length) {
+            case 1: {
+                const [arg0] = args;
+                
+                if (typeof arg0 === "string") {
+                    const text = arg0 as string;
+                    console.log("Processing text: " + text);
+                }
+                else if (typeof arg0 === "number") {
+                    const number = arg0 as number;
+                    console.log("Processing number: " + number);
+                }
+                else {
+                    throw new Error("No overload matches this parameter type combination");
+                }
+                break;
+            }
+
+            default: {
+                throw new Error("Invalid number of arguments");
+            }
         }
     }
     
     // Complex type overloads with same parameter count
     public handle(container: OverloadTest.DataContainer): void;
     public handle(obj: object): void;
-    public handle(arg: unknown): void {
-        if (arg instanceof OverloadTest.DataContainer) {
-            console.log("Handling data container: " + arg.getData());
-        } else if (typeof arg === "object" && arg !== null) {
-            console.log("Handling generic object: " + arg);
-        } else {
-            throw new Error("Invalid argument type");
+    public handle(...args: unknown[]): void {
+        // Check argument count first
+        switch (args.length) {
+            case 1: {
+                const [arg0] = args;
+                
+                if ((typeof arg0 === "object" && arg0 !== null && (function() { try { return arg0 instanceof OverloadTest.DataContainer; } catch(e) { return false; } })())) {
+                    const container = arg0 as OverloadTest.DataContainer;
+                    console.log("Handling data container: " + container.getData());
+                }
+                else if (typeof arg0 === "object" && arg0 !== null) {
+                    const obj = arg0 as object;
+                    console.log("Handling generic object: " + obj);
+                }
+                else {
+                    throw new Error("No overload matches this parameter type combination");
+                }
+                break;
+            }
+
+            default: {
+                throw new Error("Invalid number of arguments");
+            }
         }
     }
 

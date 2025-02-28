@@ -274,13 +274,7 @@ describe("Fixtures Tests", () => {
     await fs.rm(targetDir, { recursive: true, force: true });
   });
 
-  const files = [
-    "./tests/conversion/fixtures/java/One.java",
-    "./tests/conversion/fixtures/java/OverloadTest.java",
-  ];
-
-  test.each(files)("Converts %s correctly", async (javaFile) => {
-    console.log(">>>>>>> javaFile", javaFile);
+  test.each(javaFiles)("Converts %s correctly", async (javaFile) => {
     const baseName = path.basename(javaFile, ".java");
     const generatedTsPath = path.join(targetDir, `${baseName}.ts`);
     const expectedTsPath = path.join(tsFixturesDir, `${baseName}.ts`);
