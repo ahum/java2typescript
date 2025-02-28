@@ -5,7 +5,7 @@
 
 import * as fs from "fs/promises";
 import * as path from "path";
-import { expect, describe, afterAll, it, beforeAll } from "vitest";
+import { expect, describe, afterAll, test, beforeAll } from "vitest";
 import * as ts from "typescript";
 
 import { JavaToTypescriptConverter } from "../../src/conversion/JavaToTypeScript.js";
@@ -228,6 +228,10 @@ describe("Fixtures Tests", () => {
   const tsFixturesDir = path.join(fixturesDir, "ts");
   const targetDir = path.join(testDir, "conversion", "generated-fixtures");
 
+  // Store Java files for test.each
+  let javaFiles: string[] = [];
+  let javaFilePaths: string[] = [];
+
   beforeAll(async () => {
     // Ensure the target directory exists
     try {
@@ -238,22 +242,15 @@ describe("Fixtures Tests", () => {
     } catch (e) {
       // Ignore if directory already exists
     }
-  });
 
-  afterAll(async () => {
-    await fs.rm(targetDir, { recursive: true, force: true });
-  });
-
-  it("Converts all fixture files correctly", async () => {
     // Get all Java files from the fixtures directory
-    const javaFiles = await fs.readdir(javaFixturesDir);
-    const javaFilePaths = javaFiles
-      .filter((file) => {
-        return file.endsWith(".java");
-      })
-      .map((file) => {
-        return path.join(javaFixturesDir, file);
-      });
+    javaFiles = (await fs.readdir(javaFixturesDir)).filter(file => 
+      file.endsWith(".java")
+    );
+    
+    javaFilePaths = javaFiles.map(file => 
+      path.join(javaFixturesDir, file)
+    );
 
     // Configure converter
     const converter = new JavaToTypescriptConverter({
@@ -269,65 +266,63 @@ describe("Fixtures Tests", () => {
 
     // Run conversion
     await converter.startConversion();
+  });
 
-    // Compare each generated TS file with its expected fixture
-    for (const javaFile of javaFiles.filter((file) => {
-      return file.endsWith(".java");
-    })) {
-      const baseName = path.basename(javaFile, ".java");
-      const generatedTsPath = path.join(targetDir, `${baseName}.ts`);
-      const expectedTsPath = path.join(tsFixturesDir, `${baseName}.ts`);
+  afterAll(async () => {
+    await fs.rm(targetDir, { recursive: true, force: true });
+  });
 
-      // Check if expected fixture exists
-      try {
-        await fs.access(expectedTsPath);
-      } catch (e) {
-        throw new Error(
-          `Expected TypeScript fixture not found: ${expectedTsPath}`
-        );
-      }
+  test.each(javaFiles)("Converts %s correctly", async (javaFile) => {
+    const baseName = path.basename(javaFile, ".java");
+    const generatedTsPath = path.join(targetDir, `${baseName}.ts`);
+    const expectedTsPath = path.join(tsFixturesDir, `${baseName}.ts`);
 
-      // Read files
-      const generatedContent = (
-        await fs.readFile(generatedTsPath, "utf8")
-      ).trim();
-      const expectedContent = (
-        await fs.readFile(expectedTsPath, "utf8")
-      ).trim();
-
-      // Compare text content
-      // expect(generatedContent).toBe(expectedContent);
-
-      // Parse TypeScript files into ASTs
-      const generatedSourceFile = ts.createSourceFile(
-        generatedTsPath,
-        generatedContent,
-        ts.ScriptTarget.Latest,
-        true
+    // Check if expected fixture exists
+    try {
+      await fs.access(expectedTsPath);
+    } catch (e) {
+      throw new Error(
+        `Expected TypeScript fixture not found: ${expectedTsPath}`
       );
-
-      const expectedSourceFile = ts.createSourceFile(
-        expectedTsPath,
-        expectedContent,
-        ts.ScriptTarget.Latest,
-        true
-      );
-
-      // Compare ASTs
-      const astsEqual = compareAsts(generatedSourceFile, expectedSourceFile);
-
-      if (!astsEqual) {
-        // Generate and log the AST differences
-        const differences = diffAsts(expectedSourceFile, generatedSourceFile);
-        console.log(`AST differences for ${baseName}:`);
-        console.log(differences);
-        console.log("GENERATED");
-        console.log(generatedContent);
-        console.log("EXPECTED");
-        console.log(expectedContent);
-      }
-
-      expect(astsEqual).toBe(true);
     }
+
+    // Read files
+    const generatedContent = (
+      await fs.readFile(generatedTsPath, "utf8")
+    ).trim();
+    const expectedContent = (
+      await fs.readFile(expectedTsPath, "utf8")
+    ).trim();
+
+    // Parse TypeScript files into ASTs
+    const generatedSourceFile = ts.createSourceFile(
+      generatedTsPath,
+      generatedContent,
+      ts.ScriptTarget.Latest,
+      true
+    );
+
+    const expectedSourceFile = ts.createSourceFile(
+      expectedTsPath,
+      expectedContent,
+      ts.ScriptTarget.Latest,
+      true
+    );
+
+    // Compare ASTs
+    const astsEqual = compareAsts(generatedSourceFile, expectedSourceFile);
+
+    if (!astsEqual) {
+      // Generate and log the AST differences
+      const differences = diffAsts(expectedSourceFile, generatedSourceFile);
+      console.log(`AST differences for ${baseName}:`);
+      console.log(differences);
+      console.log("GENERATED");
+      console.log(generatedContent);
+      console.log("EXPECTED");
+      console.log(expectedContent);
+    }
+
+    expect(astsEqual).toBe(true);
   });
 });
