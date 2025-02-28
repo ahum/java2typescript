@@ -520,7 +520,10 @@ export class FileProcessor {
               const typeParameters = symbol.typeParameters as string;
               // Remove any zero-width spaces that might be in the type parameters
               // Convert to JavaScript string to use replace method
-              const cleanTypeParameters = String(typeParameters).replace(/\u200B/g, "");
+              const cleanTypeParameters = String(typeParameters).replace(
+                /\u200B/g,
+                ""
+              );
               aliases += `type ${symbol.name}${cleanTypeParameters} = ${key}${cleanTypeParameters};\n`;
             } else {
               aliases += `type ${symbol.name} = ${key};\n`;
@@ -1740,7 +1743,7 @@ export class FileProcessor {
     const currentContent = builder.toString();
     // Convert to a JavaScript string to use JavaScript string methods
     const jsString = String(currentContent);
-    if (jsString && jsString.indexOf("\u200B") !== -1) {
+    if (jsString && jsString.includes("\u200B")) {
       builder.clear();
       builder.append(jsString.replace(/\u200B/g, ""));
     }
