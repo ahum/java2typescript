@@ -70,13 +70,20 @@ const convert = async () => {
     //   process.cwd(),
     //   "../gwt-experiment/user/src/com/google/gwt/event/dom/client"
     // ),
-    include: ["DomEvent.java", "Button.java", "RootPanel.java"],
+    include: [
+      // "DomEvent.java",
+      // "Button.java",
+      // "RootPanel.java",
+      // "Event.java",
+      // "AbsolutePanel.java",
+      // "Document.java",
+    ],
     exclude: [],
     // outputPath: "../gwt-ts/user-ts-tester/",
     outputPath: "../gwt-ts/user-ts/",
     options: {
       importResolver,
-      convertAnnotations: true,
+      convertAnnotations: false,
       preferArrowFunctions: false,
       autoAddBraces: true,
       addIndexFiles: false,
