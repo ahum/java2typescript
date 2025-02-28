@@ -1,3 +1,4 @@
+tests/conversion/generated-fixtures
 output
 node_modules
 coverage

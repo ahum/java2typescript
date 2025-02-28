@@ -231,7 +231,7 @@ describe("Fixtures Tests", () => {
   const targetDir = path.join(testDir, "conversion", "generated-fixtures");
 
   // Store Java files for test.each
-  let javaFiles: string[] = [];
+  const javaFiles: string[] = [];
   let javaFilePaths: string[] = [];
 
   beforeAll(async () => {
@@ -246,10 +246,9 @@ describe("Fixtures Tests", () => {
     }
 
     // Get all Java files from the fixtures directory
-    javaFiles = (await fs.readdir(javaFixturesDir)).filter((file) => {
-      return file.endsWith(".java");
-    });
-    console.log(`Found ${javaFiles.length} java files in ${javaFixturesDir}`);
+    // javaFiles = (await fs.readdir(javaFixturesDir)).filter((file) => {
+    //   return file.endsWith(".java");
+    // });
 
     javaFilePaths = javaFiles.map((file) => {
       return path.join(javaFixturesDir, file);
@@ -275,7 +274,13 @@ describe("Fixtures Tests", () => {
     // await fs.rm(targetDir, { recursive: true, force: true });
   });
 
-  test.each(javaFiles)("Converts %s correctly", async (javaFile) => {
+  const files = [
+    "./tests/conversion/fixtures/java/One.java",
+    "./tests/conversion/fixtures/java/OverloadTest.java",
+  ];
+
+  test.each(files)("Converts %s correctly", async (javaFile) => {
+    console.log(">>>>>>> javaFile", javaFile);
     const baseName = path.basename(javaFile, ".java");
     const generatedTsPath = path.join(targetDir, `${baseName}.ts`);
     const expectedTsPath = path.join(tsFixturesDir, `${baseName}.ts`);
