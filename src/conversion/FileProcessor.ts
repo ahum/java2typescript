@@ -1737,7 +1737,7 @@ export class FileProcessor {
 
     // Clean any zero-width spaces that might have been introduced
     const currentContent = builder.toString();
-    if (currentContent && currentContent.includes("\u200B")) {
+    if (currentContent && currentContent.indexOf("\u200B") !== -1) {
       builder.clear();
       builder.append(currentContent.replace(/\u200B/g, ""));
     }
