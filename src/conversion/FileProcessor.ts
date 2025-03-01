@@ -1561,6 +1561,7 @@ export class FileProcessor {
     context: MethodBodyContext
   ): void => {
     if (context.block()) {
+      console.log('->>>>>>>>>>>>>>>>. block');
       // Check if this is a JSNI block (native method with special comment format)
       if (context.parent?.parent instanceof MethodDeclarationContext) {
         const methodDecl = context.parent?.parent as MethodDeclarationContext;
@@ -1578,6 +1579,7 @@ export class FileProcessor {
         }
         
         if (isNative) {
+          console.log('isNative -<<<<')
           // This is a native method, check for JSNI comment block
           const blockText = this.source.getText(context.block()!.sourceInterval);
           
