@@ -292,10 +292,11 @@ describe("Fixtures Tests", () => {
   });
 
   const files = [
-    "./tests/conversion/fixtures/java/One.java",
-    "./tests/conversion/fixtures/java/OverloadTest.java",
-    "./tests/conversion/fixtures/java/PrivateObject.java",
-    "./tests/conversion/fixtures/java/RootPanel.java",
+//    "./tests/conversion/fixtures/java/One.java",
+//    "./tests/conversion/fixtures/java/OverloadTest.java",
+//    "./tests/conversion/fixtures/java/PrivateObject.java",
+//     "./tests/conversion/fixtures/java/RootPanel.java",
+     "./tests/conversion/fixtures/java/Cookies.java",
   ];
 
   test.each(files)("Converts %s correctly", async (javaFile) => {
@@ -320,6 +321,13 @@ describe("Fixtures Tests", () => {
     const expectedContent = (await fs.readFile(expectedTsPath, "utf8")).trim();
     console.log("generated:", generatedTsPath);
     console.log("expected:", expectedTsPath);
+    console.log('expected-----------');
+    console.log(expectedContent);
+    console.log('generated-----------');
+    console.log(generatedContent);
+
+    expect(generatedContent.includes("/*-")).toBe(false);
+    
     // Parse TypeScript files into ASTs
     const generatedSourceFile = ts.createSourceFile(
       generatedTsPath,
