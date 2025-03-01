@@ -1583,10 +1583,10 @@ export class FileProcessor {
           const jsniMatch = blockText.match(/\/\*-\{([\s\S]*?)\}-\*\//);
           
           if (jsniMatch) {
-            // Found JSNI block, extract the JavaScript code
+            // Found JSNI block, extract the JavaScript code without the JSNI wrapper
             const jsCode = jsniMatch[1].trim();
             
-            // Replace the entire block with the extracted JavaScript
+            // Replace the entire block with the extracted JavaScript code only
             builder.append(" {\n");
             builder.append("  // JSNI code converted from GWT\n");
             builder.append("  ");
