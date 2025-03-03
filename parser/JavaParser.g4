@@ -147,6 +147,7 @@ memberDeclaration:
     | classDeclaration
     | enumDeclaration
     | recordDeclaration //Java17
+    | jsniMethodDeclaration // JavaScript Native Interface method
 ;
 
 /* We use rule this even for void methods which cannot have [] after parameters.
@@ -158,8 +159,14 @@ methodDeclaration:
     typeTypeOrVoid identifier formalParameters ('[' ']')* (THROWS qualifiedNameList)? methodBody
 ;
 
+// JavaScript Native Interface method declaration
+jsniMethodDeclaration:
+    modifier* typeTypeOrVoid identifier formalParameters ('[' ']')* (THROWS qualifiedNameList)? JSNI_COMMENT
+;
+
 methodBody:
     block
+    | JSNI_COMMENT  // JavaScript Native Interface method body
     | ';'
 ;
 

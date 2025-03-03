@@ -198,6 +198,7 @@ ELLIPSIS:           '...';
 // Whitespace and comments
 
 WS:                 [ \t\r\n\u000C]+ -> channel(HIDDEN);
+JSNI_COMMENT:       '/*-{' .*? '}-*/' -> mode(DEFAULT_MODE); // JSNI method body
 COMMENT:            '/*' .*? '*/'    -> channel(HIDDEN);
 LINE_COMMENT:       '//' ~[\r\n]*    -> channel(HIDDEN);
 
