@@ -1120,12 +1120,6 @@ export class FileProcessor {
               break;
             }
 
-            case ModifierType.Native: {
-              // We'll handle native methods specially when processing their body
-              // but we don't need to add a modifier in TypeScript
-              break;
-            }
-
             case ModifierType.Static: {
               modifiers.add("static");
               break;
@@ -1195,9 +1189,6 @@ export class FileProcessor {
         context.classOrInterfaceModifier(),
         RelatedElement.Class
       );
-    } else if (context.NATIVE()) {
-      this.ignoreContent(context.NATIVE());
-      result = ModifierType.Native;
     } else {
       this.ignoreContent(context);
       result = ModifierType.Ignored;
@@ -1561,52 +1552,6 @@ export class FileProcessor {
     context: MethodBodyContext
   ): void => {
     if (context.block()) {
-      // Check if this is a JSNI block (native method with special comment format)
-      if (context.parent?.parent instanceof MethodDeclarationContext) {
-        const methodDecl = context.parent?.parent as MethodDeclarationContext;
-        const modifiers = methodDecl.parent?.parent?.getChild(0) as ClassBodyDeclarationContext;
-        
-        // Check if this is a native method
-        let isNative = false;
-        if (modifiers) {
-          for (const modifier of modifiers.modifier()) {
-            if (modifier.NATIVE()) {
-              isNative = true;
-              break;
-            }
-          }
-        }
-        
-        // Check for JSNI comment block regardless of native modifier
-        // This allows us to handle JSNI blocks even if the native modifier isn't detected
-        const blockText = this.source.getText(context.block()!.sourceInterval);
-        const jsniMatch = blockText.match(/\/\*-\{([\s\S]*?)\}-\*\//);
-        
-        if (jsniMatch) {
-          // Found JSNI block, extract the JavaScript code without the JSNI wrapper
-          // jsniMatch[1] contains only the content between /*-{ and }-*/
-          const jsCode = jsniMatch[1].trim();
-          
-          // Replace the entire block with the extracted JavaScript code only
-          builder.append(" {\n");
-          builder.append("  // JSNI code converted from GWT\n");
-          builder.append("  ");
-          
-          // Make sure we're not including the JSNI delimiters in the output
-          if (jsCode.startsWith("/*-{") && jsCode.endsWith("}-*/")) {
-            // If somehow the delimiters are still in the extracted code, remove them
-            const innerCode = jsCode.substring(4, jsCode.length - 4).trim();
-            builder.append(innerCode);
-          } else {
-            builder.append(jsCode);
-          }
-          
-          builder.append("\n}");
-          return;
-        }
-      }
-      
-      // Regular method body processing
       this.processBlock({ builder, context: context.block() });
     } else {
       this.getContent(builder, context.SEMI());
