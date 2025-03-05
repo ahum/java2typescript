@@ -137,7 +137,8 @@ classBodyDeclaration:
 ;
 
 memberDeclaration:
-    methodDeclaration
+    jsniMethodDeclaration // JavaScript Native Interface method
+    | methodDeclaration
     | genericMethodDeclaration
     | fieldDeclaration
     | constructorDeclaration
@@ -147,7 +148,6 @@ memberDeclaration:
     | classDeclaration
     | enumDeclaration
     | recordDeclaration //Java17
-    | jsniMethodDeclaration // JavaScript Native Interface method
 ;
 
 /* We use rule this even for void methods which cannot have [] after parameters.
@@ -166,7 +166,6 @@ jsniMethodDeclaration:
 
 methodBody:
     block
-    | JSNI_COMMENT  // JavaScript Native Interface method body
     | ';'
 ;
 
