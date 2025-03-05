@@ -1144,7 +1144,6 @@ export class FileProcessor {
 
     const firstChild = context.getChild(0) as ParserRuleContext;
 
-    console.log("ruleIndex:", firstChild.ruleIndex);
     switch (firstChild.ruleIndex) {
       case JavaParser.RULE_jsniMethodDeclaration: {
         const details = this.processJsniMethodDeclaration(
@@ -1359,7 +1358,6 @@ export class FileProcessor {
   private processJsniMethodDeclaration = (
     context: JsniMethodDeclarationContext
   ): ITypeMemberDetails | undefined => {
-    console.log(">>>>>>>>!!!!! JSNI");
     if (!context) {
       return undefined;
     }
@@ -1371,26 +1369,25 @@ export class FileProcessor {
     };
 
     const returnType = new java.lang.StringBuilder();
-    // const methodDecl = context.interfaceCommonBodyDeclaration();
 
-    // if (!this.processTypeTypeOrVoid(returnType, methodDecl.typeTypeOrVoid())) {
-    //   // Not a primitive type so make it explicitly nullable.
-    //   const addNull = this.configuration.options?.addNullUnionType ?? true;
-    //   if (addNull) {
-    //     returnType.append(" | null");
-    //   }
-    // }
+    if (!this.processTypeTypeOrVoid(returnType, context.typeTypeOrVoid())) {
+      // Not a primitive type so make it explicitly nullable.
+      const addNull = this.configuration.options?.addNullUnionType ?? true;
+      if (addNull) {
+        returnType.append(" | null");
+      }
+    }
 
-    // result.nameWhitespace = this.getLeadingWhiteSpaces(methodDecl.identifier());
-    result.name = context.identifier().getText(); //.identifier().getText();
-    // this.ignoreContent(methodDecl.identifier());
+    result.nameWhitespace = this.getLeadingWhiteSpaces(context.identifier());
+    result.name = context.identifier().getText();
+    this.ignoreContent(context.identifier());
 
     result.signatureContent = new java.lang.StringBuilder();
     result.signature = [];
     result.returnType = `${returnType.toString()}`;
 
     if (this.configuration.options?.preferArrowFunctions) {
-      result.signatureContent.append(" = ");
+      result.signatureContent.append(result.modifiers?.has("abstract") ? ": " : " = ");
     }
 
     this.processFormalParameters(result, context.formalParameters());
@@ -1411,7 +1408,7 @@ export class FileProcessor {
       const commentText = jsniComment.getText();
       // Extract the JavaScript code from the JSNI comment (remove the comment markers)
       const jsCode = commentText.substring(2, commentText.length - 2).trim();
-
+      
       // Add the JavaScript code as the method body
       result.bodyContent.append(" {\n");
       result.bodyContent.append("  // JSNI implementation\n");
@@ -1422,8 +1419,6 @@ export class FileProcessor {
       // If no JSNI comment is found, add an empty method body
       result.bodyContent.append(" {\n  // Missing JSNI implementation\n}");
     }
-
-    console.log(result.bodyContent.toString());
 
     return result;
   };
