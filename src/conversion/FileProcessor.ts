@@ -1143,9 +1143,13 @@ export class FileProcessor {
     const result: ITypeMemberDetails[] = [];
 
     const firstChild = context.getChild(0) as ParserRuleContext;
+
+    console.log("ruleIndex:", firstChild.ruleIndex);
     switch (firstChild.ruleIndex) {
       case JavaParser.RULE_jsniMethodDeclaration: {
-        const details = this.processJsniMethodDeclaration(firstChild as JsniMethodDeclarationContext);
+        const details = this.processJsniMethodDeclaration(
+          firstChild as JsniMethodDeclarationContext
+        );
         if (details) {
           details.leadingWhitespace = prefix;
           if (this.overridesMethod(context, details)) {
@@ -1353,8 +1357,9 @@ export class FileProcessor {
   };
 
   private processJsniMethodDeclaration = (
-    context: JsniMethodDeclarationContext | null
+    context: JsniMethodDeclarationContext
   ): ITypeMemberDetails | undefined => {
+    console.log(">>>>>>>>!!!!! JSNI");
     if (!context) {
       return undefined;
     }
@@ -1366,19 +1371,19 @@ export class FileProcessor {
     };
 
     const returnType = new java.lang.StringBuilder();
-    const methodDecl = context.interfaceCommonBodyDeclaration();
+    // const methodDecl = context.interfaceCommonBodyDeclaration();
 
-    if (!this.processTypeTypeOrVoid(returnType, methodDecl.typeTypeOrVoid())) {
-      // Not a primitive type so make it explicitly nullable.
-      const addNull = this.configuration.options?.addNullUnionType ?? true;
-      if (addNull) {
-        returnType.append(" | null");
-      }
-    }
+    // if (!this.processTypeTypeOrVoid(returnType, methodDecl.typeTypeOrVoid())) {
+    //   // Not a primitive type so make it explicitly nullable.
+    //   const addNull = this.configuration.options?.addNullUnionType ?? true;
+    //   if (addNull) {
+    //     returnType.append(" | null");
+    //   }
+    // }
 
-    result.nameWhitespace = this.getLeadingWhiteSpaces(methodDecl.identifier());
-    result.name = methodDecl.identifier().getText();
-    this.ignoreContent(methodDecl.identifier());
+    // result.nameWhitespace = this.getLeadingWhiteSpaces(methodDecl.identifier());
+    result.name = context.identifier().getText(); //.identifier().getText();
+    // this.ignoreContent(methodDecl.identifier());
 
     result.signatureContent = new java.lang.StringBuilder();
     result.signature = [];
@@ -1388,7 +1393,7 @@ export class FileProcessor {
       result.signatureContent.append(" = ");
     }
 
-    this.processFormalParameters(result, methodDecl.formalParameters());
+    this.processFormalParameters(result, context.formalParameters());
 
     if (this.configuration.options?.preferArrowFunctions) {
       result.signatureContent.append(`: ${returnType.toString()} =>`);
@@ -1396,8 +1401,8 @@ export class FileProcessor {
       result.signatureContent.append(`: ${returnType.toString()}`);
     }
 
-    if (methodDecl.THROWS()) {
-      this.ignoreContent(methodDecl.qualifiedNameList());
+    if (context.THROWS()) {
+      this.ignoreContent(context.qualifiedNameList());
     }
 
     // Extract the JSNI comment content and use it as the method body
@@ -1406,7 +1411,7 @@ export class FileProcessor {
       const commentText = jsniComment.getText();
       // Extract the JavaScript code from the JSNI comment (remove the comment markers)
       const jsCode = commentText.substring(2, commentText.length - 2).trim();
-      
+
       // Add the JavaScript code as the method body
       result.bodyContent.append(" {\n");
       result.bodyContent.append("  // JSNI implementation\n");
@@ -1417,6 +1422,8 @@ export class FileProcessor {
       // If no JSNI comment is found, add an empty method body
       result.bodyContent.append(" {\n  // Missing JSNI implementation\n}");
     }
+
+    console.log(result.bodyContent.toString());
 
     return result;
   };
