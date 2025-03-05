@@ -1352,6 +1352,75 @@ export class FileProcessor {
     return result;
   };
 
+  private processJsniMethodDeclaration = (
+    context: JsniMethodDeclarationContext | null
+  ): ITypeMemberDetails | undefined => {
+    if (!context) {
+      return undefined;
+    }
+
+    const result: ITypeMemberDetails = {
+      type: MemberType.Method,
+      leadingWhitespace: "",
+      bodyContent: new java.lang.StringBuilder(),
+    };
+
+    const returnType = new java.lang.StringBuilder();
+    const methodDecl = context.interfaceCommonBodyDeclaration();
+
+    if (!this.processTypeTypeOrVoid(returnType, methodDecl.typeTypeOrVoid())) {
+      // Not a primitive type so make it explicitly nullable.
+      const addNull = this.configuration.options?.addNullUnionType ?? true;
+      if (addNull) {
+        returnType.append(" | null");
+      }
+    }
+
+    result.nameWhitespace = this.getLeadingWhiteSpaces(methodDecl.identifier());
+    result.name = methodDecl.identifier().getText();
+    this.ignoreContent(methodDecl.identifier());
+
+    result.signatureContent = new java.lang.StringBuilder();
+    result.signature = [];
+    result.returnType = `${returnType.toString()}`;
+
+    if (this.configuration.options?.preferArrowFunctions) {
+      result.signatureContent.append(" = ");
+    }
+
+    this.processFormalParameters(result, methodDecl.formalParameters());
+
+    if (this.configuration.options?.preferArrowFunctions) {
+      result.signatureContent.append(`: ${returnType.toString()} =>`);
+    } else {
+      result.signatureContent.append(`: ${returnType.toString()}`);
+    }
+
+    if (methodDecl.THROWS()) {
+      this.ignoreContent(methodDecl.qualifiedNameList());
+    }
+
+    // Extract the JSNI comment content and use it as the method body
+    const jsniComment = context.JSNI_COMMENT();
+    if (jsniComment) {
+      const commentText = jsniComment.getText();
+      // Extract the JavaScript code from the JSNI comment (remove the comment markers)
+      const jsCode = commentText.substring(2, commentText.length - 2).trim();
+      
+      // Add the JavaScript code as the method body
+      result.bodyContent.append(" {\n");
+      result.bodyContent.append("  // JSNI implementation\n");
+      result.bodyContent.append("  ");
+      result.bodyContent.append(jsCode);
+      result.bodyContent.append("\n}");
+    } else {
+      // If no JSNI comment is found, add an empty method body
+      result.bodyContent.append(" {\n  // Missing JSNI implementation\n}");
+    }
+
+    return result;
+  };
+
   private processFormalParameters = (
     details: ITypeMemberDetails,
     context: FormalParametersContext
