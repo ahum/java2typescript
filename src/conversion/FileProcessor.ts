@@ -1143,7 +1143,8 @@ export class FileProcessor {
     const result: ITypeMemberDetails[] = [];
 
     const firstChild = context.getChild(0) as ParserRuleContext;
-
+    console.log(firstChild.ruleIndex);
+    console.log(firstChild);
     switch (firstChild.ruleIndex) {
       case JavaParser.RULE_jsniMethodDeclaration: {
         const details = this.processJsniMethodDeclaration(
@@ -1408,7 +1409,7 @@ export class FileProcessor {
       const commentText = jsniComment.getText();
       // Extract the JavaScript code from the JSNI comment (remove the comment markers)
       const jsCode = commentText.substring(2, commentText.length - 2).trim();
-      
+
       // Add the JavaScript code as the method body
       result.bodyContent.append(" {\n");
       result.bodyContent.append("  // JSNI implementation\n");

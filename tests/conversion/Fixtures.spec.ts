@@ -18,20 +18,14 @@ import { JavaToTypescriptConverter } from "../../src/conversion/JavaToTypeScript
  * @param sourceFile1
  * @param sourceFile2
  */
-function compareAsts(
-  sourceFile1: ts.SourceFile,
-  sourceFile2: ts.SourceFile
-): boolean {
+function compareAsts(sourceFile1: ts.SourceFile, sourceFile2: ts.SourceFile): boolean {
   // Create a TypeScript program to resolve types and symbols
   const compilerOptions: ts.CompilerOptions = {
     target: ts.ScriptTarget.ES2020,
     module: ts.ModuleKind.ESNext,
   };
 
-  const program = ts.createProgram(
-    [sourceFile1.fileName, sourceFile2.fileName],
-    compilerOptions
-  );
+  const program = ts.createProgram([sourceFile1.fileName, sourceFile2.fileName], compilerOptions);
 
   // Helper function to recursively compare nodes
   /**
@@ -52,10 +46,7 @@ function compareAsts(
 
       case ts.SyntaxKind.StringLiteral:
       case ts.SyntaxKind.NumericLiteral:
-        return (
-          (node1 as ts.LiteralExpression).text ===
-          (node2 as ts.LiteralExpression).text
-        );
+        return (node1 as ts.LiteralExpression).text === (node2 as ts.LiteralExpression).text;
 
       case ts.SyntaxKind.PropertyDeclaration:
         const prop1 = node1 as ts.PropertyDeclaration;
@@ -95,10 +86,7 @@ function compareAsts(
  * @param sourceFile2 Second source file
  * @returns A string containing the differences between the ASTs
  */
-function diffAsts(
-  sourceFile1: ts.SourceFile,
-  sourceFile2: ts.SourceFile
-): string {
+function diffAsts(sourceFile1: ts.SourceFile, sourceFile2: ts.SourceFile): string {
   const differences: string[] = [];
 
   /**
@@ -138,11 +126,7 @@ function diffAsts(
    * @param node2
    * @param path
    */
-  function compareNodes(
-    node1: ts.Node,
-    node2: ts.Node,
-    path: string = ""
-  ): void {
+  function compareNodes(node1: ts.Node, node2: ts.Node, path: string = ""): void {
     // Check if node kinds are the same
     if (node1.kind !== node2.kind) {
       differences.push(`Different node kinds at ${path}:`);
@@ -190,9 +174,7 @@ function diffAsts(
           compareNodes(prop1.type, prop2.type, `${path} > type`);
         } else if (prop1.type || prop2.type) {
           differences.push(`Property type mismatch at ${path}:`);
-          differences.push(
-            `  Expected: ${prop1.type ? "has type" : "no type"}`
-          );
+          differences.push(`  Expected: ${prop1.type ? "has type" : "no type"}`);
           differences.push(`  Actual: ${prop2.type ? "has type" : "no type"}`);
         }
         break;
@@ -292,11 +274,11 @@ describe("Fixtures Tests", () => {
   });
 
   const files = [
-//    "./tests/conversion/fixtures/java/One.java",
-//    "./tests/conversion/fixtures/java/OverloadTest.java",
-//    "./tests/conversion/fixtures/java/PrivateObject.java",
-//     "./tests/conversion/fixtures/java/RootPanel.java",
-     "./tests/conversion/fixtures/java/Cookies.java",
+    //    "./tests/conversion/fixtures/java/One.java",
+    //    "./tests/conversion/fixtures/java/OverloadTest.java",
+    //    "./tests/conversion/fixtures/java/PrivateObject.java",
+    //     "./tests/conversion/fixtures/java/RootPanel.java",
+    "./tests/conversion/fixtures/java/Cookies.java",
   ];
 
   test.each(files)("Converts %s correctly", async (javaFile) => {
@@ -314,20 +296,18 @@ describe("Fixtures Tests", () => {
     }
 
     // Read files
-    const generatedContent = (
-      await fs.readFile(generatedTsPath, "utf8")
-    ).trim();
+    const generatedContent = (await fs.readFile(generatedTsPath, "utf8")).trim();
 
     const expectedContent = (await fs.readFile(expectedTsPath, "utf8")).trim();
     console.log("generated:", generatedTsPath);
     console.log("expected:", expectedTsPath);
-    console.log('expected-----------');
+    console.log("expected-----------");
     console.log(expectedContent);
-    console.log('generated-----------');
+    console.log("generated-----------");
     console.log(generatedContent);
 
     expect(generatedContent.includes("/*-")).toBe(false);
-    
+
     // Parse TypeScript files into ASTs
     const generatedSourceFile = ts.createSourceFile(
       generatedTsPath,
