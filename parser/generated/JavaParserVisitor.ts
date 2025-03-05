@@ -24,6 +24,7 @@ import { InterfaceBodyContext } from "./JavaParser.js";
 import { ClassBodyDeclarationContext } from "./JavaParser.js";
 import { MemberDeclarationContext } from "./JavaParser.js";
 import { MethodDeclarationContext } from "./JavaParser.js";
+import { JsniMethodDeclarationContext } from "./JavaParser.js";
 import { MethodBodyContext } from "./JavaParser.js";
 import { TypeTypeOrVoidContext } from "./JavaParser.js";
 import { GenericMethodDeclarationContext } from "./JavaParser.js";
@@ -263,6 +264,12 @@ export class JavaParserVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitMethodDeclaration?: (ctx: MethodDeclarationContext) => Result;
+    /**
+     * Visit a parse tree produced by `JavaParser.jsniMethodDeclaration`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitJsniMethodDeclaration?: (ctx: JsniMethodDeclarationContext) => Result;
     /**
      * Visit a parse tree produced by `JavaParser.methodBody`.
      * @param ctx the parse tree
