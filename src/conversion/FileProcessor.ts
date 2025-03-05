@@ -108,14 +108,12 @@ import {
   VariableDeclaratorsContext,
   VariableInitializerContext,
   VariableModifierContext,
+  JsniMethodDeclarationContext,
 } from "../../parser/generated/JavaParser.js";
 
 import { PackageSource } from "../PackageSource.js";
 import { IClassResolver, IConverterConfiguration } from "./JavaToTypeScript.js";
-import {
-  EnumSymbol,
-  JavaInterfaceSymbol,
-} from "../parsing/JavaParseTreeWalker.js";
+import { EnumSymbol, JavaInterfaceSymbol } from "../parsing/JavaParseTreeWalker.js";
 import { PackageSourceManager } from "../PackageSourceManager.js";
 import { ContextType, ISymbolInfo, MemberType } from "./types.js";
 import { MemberOrdering } from "./MemberOrdering.js";
@@ -229,32 +227,19 @@ type ExtraParameters = Array<{ name: string; type: string }>;
 
 /** Converts the given Java file to Typescript. */
 export class FileProcessor {
-  private static arrayMethodMap = new Map<
-    string | undefined,
-    IMethodReplaceEntry
-  >([
-    [
-      "set",
-      { replacement: "", options: { parentheses: "indexed", removeDot: true } },
-    ],
-    [
-      "get",
-      { replacement: "", options: { parentheses: "indexed", removeDot: true } },
-    ],
+  private static arrayMethodMap = new Map<string | undefined, IMethodReplaceEntry>([
+    ["set", { replacement: "", options: { parentheses: "indexed", removeDot: true } }],
+    ["get", { replacement: "", options: { parentheses: "indexed", removeDot: true } }],
 
     ["add", { replacement: "push", options: {} }],
     ["subList", { replacement: "slice", options: {} }],
     ["size", { replacement: "length", options: { parentheses: "remove" } }],
-    [
-      "isEmpty",
-      { replacement: "length === 0", options: { parentheses: "remove" } },
-    ],
+    ["isEmpty", { replacement: "length === 0", options: { parentheses: "remove" } }],
   ]);
 
-  private static mapMethodMap = new Map<
-    string | undefined,
-    IMethodReplaceEntry
-  >([["put", { replacement: "set", options: {} }]]);
+  private static mapMethodMap = new Map<string | undefined, IMethodReplaceEntry>([
+    ["put", { replacement: "set", options: {} }],
+  ]);
 
   private whiteSpaceAnchor = 0;
 
@@ -298,14 +283,11 @@ export class FileProcessor {
     private configuration: IConverterConfiguration
   ) {
     this.classResolver = configuration.options?.classResolver ?? new Map();
-    this.userLibraryImports =
-      configuration.options?.libraryImports ?? new Map();
+    this.userLibraryImports = configuration.options?.libraryImports ?? new Map();
     this.userPackageImports = configuration.options?.packageImports ?? [];
 
     if (configuration.options?.memberOrderOptions) {
-      this.memberOrdering = new MemberOrdering(
-        configuration.options.memberOrderOptions
-      );
+      this.memberOrdering = new MemberOrdering(configuration.options.memberOrderOptions);
     }
   }
 
@@ -349,9 +331,7 @@ export class FileProcessor {
         return result;
       };
 
-      const symbols = this.source.symbolTable
-        ? getAllNestedSymbols(this.source.symbolTable)
-        : [];
+      const symbols = this.source.symbolTable ? getAllNestedSymbols(this.source.symbolTable) : [];
       symbols.forEach((symbol) => {
         if (
           symbol instanceof ClassSymbol ||
@@ -379,32 +359,23 @@ export class FileProcessor {
       let fileMatched = true;
       if (this.configuration.debug?.pathForPosition?.filePattern) {
         fileMatched =
-          this.source.sourceFile.match(
-            this.configuration.debug.pathForPosition.filePattern
-          ) !== null;
+          this.source.sourceFile.match(this.configuration.debug.pathForPosition.filePattern) !==
+          null;
       }
 
       if (this.configuration.debug?.pathForPosition && fileMatched) {
-        this.source.printParseTreeForPosition(
-          this.configuration.debug.pathForPosition.position
-        );
+        this.source.printParseTreeForPosition(this.configuration.debug.pathForPosition.position);
       }
 
       if (this.source.targetFile) {
         const builder = new java.lang.StringBuilder();
-        this.processCompilationUnit(
-          builder,
-          this.source.targetFile,
-          this.source.parseTree
-        );
+        this.processCompilationUnit(builder, this.source.targetFile, this.source.parseTree);
 
         try {
           let converted = `${builder}`;
-          this.configuration.targetReplace?.forEach(
-            (to: string, pattern: RegExp) => {
-              converted = converted.replace(pattern, to);
-            }
-          );
+          this.configuration.targetReplace?.forEach((to: string, pattern: RegExp) => {
+            converted = converted.replace(pattern, to);
+          });
 
           fs.mkdirSync(path.dirname(this.source.targetFile), {
             recursive: true,
@@ -504,26 +475,19 @@ export class FileProcessor {
       header.append("\n");
 
       let aliases = "";
-      if (
-        this.configuration.options?.useUnqualifiedTypes &&
-        this.configuration.javaLib !== ""
-      ) {
+      if (this.configuration.options?.useUnqualifiedTypes && this.configuration.javaLib !== "") {
         // Create const reassignments and type aliases depending on the type of the imported symbol.
         this.packageImports.forEach((symbol, key) => {
           // Cannot create a type alias for an enum type (it would be infinite recursion).
           const createAssignment = !(symbol instanceof InterfaceSymbol);
-          const createTypeAlias =
-            !(symbol instanceof RoutineSymbol) && key !== "java.lang.Enum";
+          const createTypeAlias = !(symbol instanceof RoutineSymbol) && key !== "java.lang.Enum";
 
           if (createTypeAlias) {
             if ("typeParameters" in symbol && symbol.typeParameters) {
               const typeParameters = symbol.typeParameters as string;
               // Remove any zero-width spaces that might be in the type parameters
               // Convert to JavaScript string to use replace method
-              const cleanTypeParameters = String(typeParameters).replace(
-                /\u200B/g,
-                ""
-              );
+              const cleanTypeParameters = String(typeParameters).replace(/\u200B/g, "");
               aliases += `type ${symbol.name}${cleanTypeParameters} = ${key}${cleanTypeParameters};\n`;
             } else {
               aliases += `type ${symbol.name} = ${key};\n`;
@@ -553,8 +517,7 @@ export class FileProcessor {
         if (resolver) {
           const importEntry = consolidatedImports.get(resolver.importPath);
 
-          const importName =
-            entry + (resolver.alias ? " as " + resolver.alias : "");
+          const importName = entry + (resolver.alias ? " as " + resolver.alias : "");
           if (importEntry) {
             importEntry.push(importName);
           } else {
@@ -617,13 +580,7 @@ export class FileProcessor {
           this.getLeadingWhiteSpaces(context);
         }
 
-        switch (
-          this.processClassOrInterfaceModifier(
-            prefix,
-            context,
-            RelatedElement.File
-          )
-        ) {
+        switch (this.processClassOrInterfaceModifier(prefix, context, RelatedElement.File)) {
           case ModifierType.Public: {
             modifiers.add("export");
             break;
@@ -653,11 +610,7 @@ export class FileProcessor {
         }
       });
 
-      if (
-        !modifiers.has("export") &&
-        !modifiers.has("protected") &&
-        !modifiers.has("private")
-      ) {
+      if (!modifiers.has("export") && !modifiers.has("protected") && !modifiers.has("private")) {
         // No modifier means package-private. TS doesn't have such a concept, so we have to export instead.
         modifiers.add("export");
       }
@@ -673,10 +626,7 @@ export class FileProcessor {
           builder.append(details.bodyContent);
         }
       } else if (context.enumDeclaration()) {
-        const details = this.processEnumDeclaration(
-          context.enumDeclaration(),
-          modifiers
-        );
+        const details = this.processEnumDeclaration(context.enumDeclaration(), modifiers);
         if (details) {
           builder.append(details.bodyContent);
         }
@@ -830,10 +780,7 @@ export class FileProcessor {
       } else if (context.annotation()) {
         this.processAnnotation(builder, context.annotation());
       } else if (context.elementValueArrayInitializer()) {
-        this.processElementValueArrayInitializer(
-          builder,
-          context.elementValueArrayInitializer()
-        );
+        this.processElementValueArrayInitializer(builder, context.elementValueArrayInitializer());
       } else {
         this.getContent(builder, context);
       }
@@ -890,10 +837,7 @@ export class FileProcessor {
     let typeParameters = "";
     if (context.typeParameters()) {
       const typeParametersBuilder = new java.lang.StringBuilder();
-      this.processTypeParameters(
-        typeParametersBuilder,
-        context.typeParameters()
-      );
+      this.processTypeParameters(typeParametersBuilder, context.typeParameters());
       typeParameters = `${typeParametersBuilder.toString()}`;
 
       localBuilder.append(typeParameters);
@@ -913,9 +857,7 @@ export class FileProcessor {
       this.processTypeList(localBuilder, context.typeList(0));
     }
 
-    if (
-      this.processClassBody(localBuilder, context.classBody(), extraCtorParams)
-    ) {
+    if (this.processClassBody(localBuilder, context.classBody(), extraCtorParams)) {
       modifiers.add("abstract");
     }
 
@@ -936,9 +878,7 @@ export class FileProcessor {
       if (modifiers.has("static")) {
         result.bodyContent.append(`${localBuilder.toString()};\n`);
       } else {
-        result.bodyContent.append(
-          `(($outer) => {\nreturn ${localBuilder.toString()}\n})(this);\n`
-        );
+        result.bodyContent.append(`(($outer) => {\nreturn ${localBuilder.toString()}\n})(this);\n`);
       }
 
       const owner = this.typeStack.peek();
@@ -965,10 +905,7 @@ export class FileProcessor {
         }
 
         if (minimizedTypeParameters.length > 0) {
-          minimizedTypeParameters = `<${minimizedTypeParameters}>`.replace(
-            /\u200B/g,
-            ""
-          );
+          minimizedTypeParameters = `<${minimizedTypeParameters}>`.replace(/\u200B/g, "");
         }
 
         this.typeStack
@@ -1134,11 +1071,7 @@ export class FileProcessor {
           }
         });
 
-        if (
-          !modifiers.has("public") &&
-          !modifiers.has("protected") &&
-          !modifiers.has("private")
-        ) {
+        if (!modifiers.has("public") && !modifiers.has("protected") && !modifiers.has("private")) {
           // No modifier means package-private.
           modifiers.add("protected");
         }
@@ -1211,10 +1144,21 @@ export class FileProcessor {
 
     const firstChild = context.getChild(0) as ParserRuleContext;
     switch (firstChild.ruleIndex) {
+      case JavaParser.RULE_jsniMethodDeclaration: {
+        const details = this.processJsniMethodDeclaration(context.methodDeclaration());
+        if (details) {
+          details.leadingWhitespace = prefix;
+          if (this.overridesMethod(context, details)) {
+            modifiers.add("override");
+          }
+          details.modifiers = modifiers;
+          result.push(details);
+        }
+
+        break;
+      }
       case JavaParser.RULE_methodDeclaration: {
-        const details = this.processMethodDeclaration(
-          context.methodDeclaration()
-        );
+        const details = this.processMethodDeclaration(context.methodDeclaration());
         if (details) {
           details.leadingWhitespace = prefix;
           if (this.overridesMethod(context, details)) {
@@ -1228,9 +1172,7 @@ export class FileProcessor {
       }
 
       case JavaParser.RULE_genericMethodDeclaration: {
-        const details = this.processGenericMethodDeclaration(
-          context.genericMethodDeclaration()
-        );
+        const details = this.processGenericMethodDeclaration(context.genericMethodDeclaration());
         if (details) {
           details.leadingWhitespace = prefix;
           details.modifiers = modifiers;
@@ -1241,10 +1183,7 @@ export class FileProcessor {
       }
 
       case JavaParser.RULE_fieldDeclaration: {
-        const list = this.processFieldDeclaration(
-          context.fieldDeclaration(),
-          modifiers
-        );
+        const list = this.processFieldDeclaration(context.fieldDeclaration(), modifiers);
         list.forEach((details) => {
           details.leadingWhitespace = prefix;
           details.modifiers = modifiers;
@@ -1299,9 +1238,7 @@ export class FileProcessor {
       }
 
       case JavaParser.RULE_annotationTypeDeclaration: {
-        const details = this.processAnnotationTypeDeclaration(
-          context.annotationTypeDeclaration()
-        );
+        const details = this.processAnnotationTypeDeclaration(context.annotationTypeDeclaration());
         if (details) {
           modifiers.add("static");
           details.leadingWhitespace = prefix;
@@ -1329,10 +1266,7 @@ export class FileProcessor {
       }
 
       case JavaParser.RULE_enumDeclaration: {
-        const details = this.processEnumDeclaration(
-          context.enumDeclaration(),
-          modifiers
-        );
+        const details = this.processEnumDeclaration(context.enumDeclaration(), modifiers);
         if (details) {
           modifiers.add("static");
           details.leadingWhitespace = prefix;
@@ -1382,9 +1316,7 @@ export class FileProcessor {
     result.returnType = `${returnType.toString()}`;
 
     if (this.configuration.options?.preferArrowFunctions) {
-      result.signatureContent.append(
-        result.modifiers?.has("abstract") ? ": " : " = "
-      );
+      result.signatureContent.append(result.modifiers?.has("abstract") ? ": " : " = ");
     }
 
     if (genericParams) {
@@ -1398,8 +1330,7 @@ export class FileProcessor {
       result.leadingWhitespace = this.getLeadingWhiteSpaces(context.LBRACK(0));
 
       const rightBrackets = context.RBRACK();
-      this.whiteSpaceAnchor =
-        rightBrackets[rightBrackets.length - 1].symbol.stop + 1;
+      this.whiteSpaceAnchor = rightBrackets[rightBrackets.length - 1].symbol.stop + 1;
     }
 
     if (this.configuration.options?.preferArrowFunctions) {
@@ -1443,16 +1374,11 @@ export class FileProcessor {
     let index = 0;
     let child = context.getChild(index);
     while (true) {
-      if (
-        !(child instanceof FormalParameterContext) ||
-        !details.signatureContent
-      ) {
+      if (!(child instanceof FormalParameterContext) || !details.signatureContent) {
         break;
       }
 
-      details.signature?.push(
-        this.processFormalParameter(details.signatureContent, child)
-      );
+      details.signature?.push(this.processFormalParameter(details.signatureContent, child));
       if (++index === context.getChildCount()) {
         break;
       }
@@ -1471,13 +1397,8 @@ export class FileProcessor {
       child = context.getChild(index);
     }
 
-    if (
-      child instanceof LastFormalParameterContext &&
-      details.signatureContent
-    ) {
-      details.signature!.push(
-        this.processFormalParameter(details.signatureContent, child)
-      );
+    if (child instanceof LastFormalParameterContext && details.signatureContent) {
+      details.signature!.push(this.processFormalParameter(details.signatureContent, child));
     }
   };
 
@@ -1568,10 +1489,7 @@ export class FileProcessor {
     const params = new java.lang.StringBuilder();
     this.processTypeParameters(params, context.typeParameters());
 
-    const result = this.processMethodDeclaration(
-      context.methodDeclaration(),
-      params
-    );
+    const result = this.processMethodDeclaration(context.methodDeclaration(), params);
     if (result) {
       result.typeParameters = `${params.toString()}`;
     }
@@ -1589,8 +1507,7 @@ export class FileProcessor {
 
     const type = new java.lang.StringBuilder();
     const addNull = this.configuration.options?.addNullUnionType ?? true;
-    const makeOptional =
-      !this.processTypeType(type, context.typeType()) && addNull;
+    const makeOptional = !this.processTypeType(type, context.typeType()) && addNull;
 
     const list = this.processVariableDeclarators(
       context.variableDeclarators(),
@@ -1709,10 +1626,7 @@ export class FileProcessor {
     // Constructors cannot have type parameters.
     this.ignoreContent(context.typeParameters());
 
-    return this.processConstructorDeclaration(
-      extraCtorParams,
-      context.constructorDeclaration()
-    );
+    return this.processConstructorDeclaration(extraCtorParams, context.constructorDeclaration());
   };
 
   private processTypeParameters = (
@@ -1844,21 +1758,11 @@ export class FileProcessor {
       this.processTypeList(localBuilder, context.typeList());
     }
 
-    const info = this.source.getQualifiedSymbol(
-      context,
-      context.identifier().getText()
-    );
-    const interfaceSymbol = info
-      ? (info.symbol as JavaInterfaceSymbol)
-      : undefined;
-    const isTypescriptCompatible =
-      interfaceSymbol?.isTypescriptCompatible ?? false;
+    const info = this.source.getQualifiedSymbol(context, context.identifier().getText());
+    const interfaceSymbol = info ? (info.symbol as JavaInterfaceSymbol) : undefined;
+    const isTypescriptCompatible = interfaceSymbol?.isTypescriptCompatible ?? false;
 
-    this.processInterfaceBody(
-      localBuilder,
-      isTypescriptCompatible,
-      context.interfaceBody()
-    );
+    this.processInterfaceBody(localBuilder, isTypescriptCompatible, context.interfaceBody());
     if (isTypescriptCompatible) {
       localBuilder.insert(0, `${ws}interface${identifierBuilder}`);
     } else {
@@ -1869,9 +1773,7 @@ export class FileProcessor {
 
     // Check if this declaration itself is nested.
     if (this.typeStack.size() > 1) {
-      this.typeStack
-        .peek()
-        .deferredDeclarations.append(`\texport ${localBuilder}\n\n`);
+      this.typeStack.peek().deferredDeclarations.append(`\texport ${localBuilder}\n\n`);
     } else {
       result.bodyContent.append(`${prefix}${localBuilder}`);
     }
@@ -2008,17 +1910,10 @@ export class FileProcessor {
     const firstChild = context.getChild(0) as ParserRuleContext;
     switch (firstChild.ruleIndex) {
       case JavaParser.RULE_constDeclaration: {
-        this.processConstDeclaration(
-          result,
-          firstChild as ConstDeclarationContext
-        );
+        this.processConstDeclaration(result, firstChild as ConstDeclarationContext);
 
         // Const declarations must be moved to a separate namespace.
-        this.typeStack
-          .peek()
-          .deferredDeclarations.append(
-            `\texport const ${result.bodyContent}\n`
-          );
+        this.typeStack.peek().deferredDeclarations.append(`\texport const ${result.bodyContent}\n`);
         result.bodyContent.clear();
 
         break;
@@ -2068,10 +1963,7 @@ export class FileProcessor {
       }
 
       case JavaParser.RULE_enumDeclaration: {
-        return this.processEnumDeclaration(
-          firstChild as EnumDeclarationContext,
-          modifiers
-        );
+        return this.processEnumDeclaration(firstChild as EnumDeclarationContext, modifiers);
       }
 
       default:
@@ -2179,8 +2071,7 @@ export class FileProcessor {
     this.processTypeTypeOrVoid(returnType, context.typeTypeOrVoid());
     details.returnType = `${returnType.toString()}`;
 
-    const isAbstract =
-      context.methodBody().SEMI() != null && !isTypescriptCompatible;
+    const isAbstract = context.methodBody().SEMI() != null && !isTypescriptCompatible;
     if (isAbstract) {
       details.type = MemberType.Abstract;
       details.modifiers?.add("abstract");
@@ -2189,8 +2080,7 @@ export class FileProcessor {
     }
 
     const useArrowFunction =
-      !isTypescriptCompatible &&
-      this.configuration.options?.preferArrowFunctions;
+      !isTypescriptCompatible && this.configuration.options?.preferArrowFunctions;
     details.name = context.identifier().getText();
     details.nameWhitespace = this.getLeadingWhiteSpaces(context.identifier());
     this.ignoreContent(context.identifier());
@@ -2274,9 +2164,7 @@ export class FileProcessor {
       qualifier = "java.lang.";
     }
 
-    localBuilder.append(
-      S` extends ${qualifier}Enum<${context.identifier().getText()}>`
-    ); // Implicit in Java.
+    localBuilder.append(S` extends ${qualifier}Enum<${context.identifier().getText()}>`); // Implicit in Java.
     this.resolveType(context, "Enum");
 
     if (context.IMPLEMENTS()) {
@@ -2315,16 +2203,13 @@ export class FileProcessor {
       const className = context.identifier().getText();
 
       // This is a nested enum declaration, which are implicitly static.
-      result.bodyContent.append(
-        ` ${className} = ${localBuilder.toString()};\n`
-      );
+      result.bodyContent.append(` ${className} = ${localBuilder.toString()};\n`);
       const owner = this.typeStack.peek();
 
       this.typeStack
         .peek()
         .deferredDeclarations.append(
-          `\texport type ${className}` +
-            ` = InstanceType<typeof ${owner.name!}.${className}>;\n`
+          `\texport type ${className}` + ` = InstanceType<typeof ${owner.name!}.${className}>;\n`
         );
     } else {
       // A top level enum declaration.
@@ -2417,13 +2302,9 @@ export class FileProcessor {
     if (details.extra) {
       // Add this string to the block before processing the rest.
       if (details.context.blockStatement().length > 0) {
-        details.builder.append(
-          this.getLeadingWhiteSpaces(details.context.blockStatement(0))
-        );
+        details.builder.append(this.getLeadingWhiteSpaces(details.context.blockStatement(0)));
       } else {
-        details.builder.append(
-          this.getLeadingWhiteSpaces(details.context.RBRACE())
-        );
+        details.builder.append(this.getLeadingWhiteSpaces(details.context.RBRACE()));
       }
       details.builder.append(details.extra);
     }
@@ -2442,10 +2323,7 @@ export class FileProcessor {
     context: BlockStatementContext
   ): void => {
     if (context.localVariableDeclaration()) {
-      this.processLocalVariableDeclaration(
-        builder,
-        context.localVariableDeclaration()
-      );
+      this.processLocalVariableDeclaration(builder, context.localVariableDeclaration());
       this.getContent(builder, context.SEMI());
     } else if (context.statement()) {
       this.processStatement(builder, context.statement());
@@ -2561,8 +2439,7 @@ export class FileProcessor {
     if (type.length() > 0) {
       builder.append(`${ws}${name}`);
 
-      const suppressType =
-        this.configuration.options?.suppressTypeWithInitializer ?? false;
+      const suppressType = this.configuration.options?.suppressTypeWithInitializer ?? false;
       if (!hasInitializer || !suppressType) {
         builder.append(`: ${type}${makeOptional ? " | null" : ""}`);
       }
@@ -2677,11 +2554,7 @@ export class FileProcessor {
           const typeType = context.typeType();
           if (typeType.length > 1) {
             // This is a construct we cannot convert.
-            this.getRangeCommented(
-              builder,
-              typeType[0],
-              typeType[typeType.length - 1]
-            );
+            this.getRangeCommented(builder, typeType[0], typeType[typeType.length - 1]);
           } else if (typeType.length === 1) {
             this.processTypeType(type, typeType[0]);
           }
@@ -2692,9 +2565,7 @@ export class FileProcessor {
             case "string": {
               const expression = new java.lang.StringBuilder();
               this.processExpression(expression, context.expression(0));
-              builder.append(
-                `${leftWs}String(${expression.toString()})${rightWs}`
-              );
+              builder.append(`${leftWs}String(${expression.toString()})${rightWs}`);
 
               break;
             }
@@ -2702,9 +2573,7 @@ export class FileProcessor {
             case "number": {
               const expression = new java.lang.StringBuilder();
               this.processExpression(expression, context.expression(0));
-              builder.append(
-                `${leftWs}Number(${expression.toString()})${rightWs}`
-              );
+              builder.append(`${leftWs}Number(${expression.toString()})${rightWs}`);
 
               break;
             }
@@ -2741,10 +2610,7 @@ export class FileProcessor {
           builder.append(this.getLeadingWhiteSpaces(context.expression(0)));
 
           const firstExpression = new java.lang.StringBuilder();
-          instance = this.processExpression(
-            firstExpression,
-            context.expression(0)
-          );
+          instance = this.processExpression(firstExpression, context.expression(0));
 
           // eslint-disable-next-line no-underscore-dangle
           const operator = context._bop;
@@ -2844,17 +2710,13 @@ export class FileProcessor {
               switch (secondChild.symbol.type) {
                 case JavaLexer.LT:
                 case JavaLexer.GT: {
-                  builder.append(
-                    this.getLeadingWhiteSpaces(context.expression(1))
-                  );
+                  builder.append(this.getLeadingWhiteSpaces(context.expression(1)));
                   this.processExpression(builder, context.expression(1));
                   break;
                 }
 
                 case JavaLexer.COLONCOLON: {
-                  builder.append(
-                    this.getLeadingWhiteSpaces(context.COLONCOLON()) + "."
-                  );
+                  builder.append(this.getLeadingWhiteSpaces(context.COLONCOLON()) + ".");
                   this.processTypeArguments(builder, context.typeArguments());
                   this.getContent(builder, context.identifier());
 
@@ -2877,17 +2739,13 @@ export class FileProcessor {
 
                 default: {
                   // Something unhandled.
-                  builder.append(
-                    " /* Internal error: unhandled expression part. */ "
-                  );
+                  builder.append(" /* Internal error: unhandled expression part. */ ");
                   break;
                 }
               }
             } else {
               // Something unhandled.
-              builder.append(
-                " /* Internal error: unhandled expression part. */ "
-              );
+              builder.append(" /* Internal error: unhandled expression part. */ ");
             }
           }
 
@@ -2909,9 +2767,7 @@ export class FileProcessor {
         case JavaParser.RULE_typeType: {
           // Method reference.
           this.processTypeType(builder, context.typeType(0));
-          builder.append(
-            this.getLeadingWhiteSpaces(context.COLONCOLON()) + "."
-          );
+          builder.append(this.getLeadingWhiteSpaces(context.COLONCOLON()) + ".");
           if (context.typeArguments()) {
             this.processTypeArguments(builder, context.typeArguments());
             this.getContent(builder, context.identifier());
@@ -2925,9 +2781,7 @@ export class FileProcessor {
         case JavaParser.RULE_classType: {
           // Class reference.
           this.processClassType(builder, context.classType());
-          builder.append(
-            this.getLeadingWhiteSpaces(context.COLONCOLON()) + "."
-          );
+          builder.append(this.getLeadingWhiteSpaces(context.COLONCOLON()) + ".");
           if (context.typeArguments()) {
             this.processTypeArguments(builder, context.typeArguments());
           }
@@ -3035,10 +2889,7 @@ export class FileProcessor {
     }
 
     if (context.nonWildcardTypeArguments()) {
-      this.processNonWildcardTypeArguments(
-        builder,
-        context.nonWildcardTypeArguments()
-      );
+      this.processNonWildcardTypeArguments(builder, context.nonWildcardTypeArguments());
     } else {
       this.getContent(builder, context);
     }
@@ -3123,11 +2974,7 @@ export class FileProcessor {
 
       let transformed = false; // Was the call completely transformed?
 
-      if (
-        instance &&
-        instance.symbol instanceof TypedSymbol &&
-        instance.symbol.type
-      ) {
+      if (instance && instance.symbol instanceof TypedSymbol && instance.symbol.type) {
         // Replace some known method call identifiers with their TS equivalent.
         let transform: IMethodReplaceEntry | undefined;
 
@@ -3177,16 +3024,12 @@ export class FileProcessor {
             }
 
             case "indexed": {
-              builder.append(
-                `${this.getLeadingWhiteSpaces(context.LPAREN())}[`
-              );
+              builder.append(`${this.getLeadingWhiteSpaces(context.LPAREN())}[`);
               this.ignoreContent(context.LPAREN());
               if (context.expressionList()) {
                 this.processExpressionList(builder, context.expressionList());
               }
-              builder.append(
-                `${this.getLeadingWhiteSpaces(context.RPAREN())}]`
-              );
+              builder.append(`${this.getLeadingWhiteSpaces(context.RPAREN())}]`);
               this.ignoreContent(context.RPAREN());
 
               transformed = true;
@@ -3203,8 +3046,7 @@ export class FileProcessor {
         builder.append(methodName);
       } else {
         // Check if there's a qualifier for this call. If not try to resolve the method to a known symbol.
-        const expression =
-          context.parent as ParserRuleContext as ExpressionContext;
+        const expression = context.parent as ParserRuleContext as ExpressionContext;
         let info: string | ISymbolInfo | undefined;
         if (expression.expression().length === 0) {
           info = this.resolveType(context, methodName);
@@ -3306,10 +3148,7 @@ export class FileProcessor {
 
     if (context.nonWildcardTypeArguments()) {
       // Generic creator.
-      this.processNonWildcardTypeArguments(
-        builder,
-        context.nonWildcardTypeArguments()
-      );
+      this.processNonWildcardTypeArguments(builder, context.nonWildcardTypeArguments());
       this.processCreatedName(builder, context.createdName());
       this.processClassCreatorRest(builder, context.classCreatorRest());
     } else {
@@ -3449,8 +3288,7 @@ export class FileProcessor {
 
           let name = context.identifier()?.getText() ?? "";
           instance =
-            context.parent &&
-            (this.source.getQualifiedSymbol(context.parent, name) ?? null);
+            context.parent && (this.source.getQualifiedSymbol(context.parent, name) ?? null);
 
           if (!instance) {
             const info = this.resolveType(context, name);
@@ -3493,10 +3331,7 @@ export class FileProcessor {
         }
 
         default: {
-          this.processNonWildcardTypeArguments(
-            builder,
-            context.nonWildcardTypeArguments()
-          );
+          this.processNonWildcardTypeArguments(builder, context.nonWildcardTypeArguments());
           if (context.THIS()) {
             this.getContent(builder, context.THIS());
             this.processArguments(builder, context.arguments());
@@ -3645,8 +3480,7 @@ export class FileProcessor {
           // With try-with-resource statements it can be there's neither a catch nor a finally clause.
           // If that's the case then we don't need the outer try block anymore.
           const hasCatchOrFinally =
-            context.catchClause().length !== 0 ||
-            context.finallyBlock() != null;
+            context.catchClause().length !== 0 || context.finallyBlock() != null;
 
           if (hasCatchOrFinally) {
             this.getContent(builder, context.TRY());
@@ -3671,13 +3505,9 @@ export class FileProcessor {
             builder.append("\ntry {\n\ttry ");
             this.processBlock({ builder, context: context.block() });
             builder.append(
-              `\n\tfinally {\n\terror = closeResources([${names.join(
-                ", "
-              )}]);\n\t}\n`
+              `\n\tfinally {\n\terror = closeResources([${names.join(", ")}]);\n\t}\n`
             );
-            builder.append(
-              "} catch(e) {\n\terror = handleResourceError(e, error);\n"
-            );
+            builder.append("} catch(e) {\n\terror = handleResourceError(e, error);\n");
             builder.append("} finally {\n\tthrowResourceError(error);\n}\n}\n");
           } else {
             this.processBlock({ builder, context: context.block() });
@@ -3696,10 +3526,7 @@ export class FileProcessor {
           // See if there's a default branch.
           let hasDefault = false;
           context.switchBlockStatementGroup().forEach((group) => {
-            hasDefault ||= this.processSwitchBlockStatementGroup(
-              builder,
-              group
-            );
+            hasDefault ||= this.processSwitchBlockStatementGroup(builder, group);
           });
 
           context.switchLabel().forEach((label) => {
@@ -3716,9 +3543,7 @@ export class FileProcessor {
         }
 
         case JavaLexer.SYNCHRONIZED: {
-          builder.append(
-            `${this.getLeadingWhiteSpaces(context.SYNCHRONIZED())}/* `
-          );
+          builder.append(`${this.getLeadingWhiteSpaces(context.SYNCHRONIZED())}/* `);
           this.getContent(builder, context.SYNCHRONIZED());
           this.getContent(builder, context.parExpression());
           this.getContent(builder, context.block()!.LBRACE());
@@ -3819,10 +3644,7 @@ export class FileProcessor {
     builder.append(this.getLeadingWhiteSpaces(context.LPAREN()));
     this.ignoreContent(context.LPAREN());
 
-    const names = this.processResources(
-      builder,
-      context.resources().resource()
-    );
+    const names = this.processResources(builder, context.resources().resource());
 
     this.ignoreContent(context.RPAREN());
 
@@ -3850,20 +3672,12 @@ export class FileProcessor {
           builder.append(`${this.getLeadingWhiteSpaces(resource.VAR())}const`);
           identifier = resource.identifier()?.getText() ?? "";
         } else {
-          builder.append(
-            `${this.getLeadingWhiteSpaces(
-              resource.classOrInterfaceType()
-            )}const`
-          );
+          builder.append(`${this.getLeadingWhiteSpaces(resource.classOrInterfaceType())}const`);
 
           const localBuilder = new java.lang.StringBuilder();
-          this.processClassOrInterfaceType(
-            localBuilder,
-            resource.classOrInterfaceType()
-          );
+          this.processClassOrInterfaceType(localBuilder, resource.classOrInterfaceType());
 
-          identifier =
-            resource.variableDeclaratorId()?.identifier().getText() ?? "";
+          identifier = resource.variableDeclaratorId()?.identifier().getText() ?? "";
           this.getContent(builder, resource.variableDeclaratorId());
           builder.append(`: ${localBuilder.toString()} `);
         }
@@ -3984,9 +3798,7 @@ export class FileProcessor {
         });
 
       this.ignoreContent(context.RPAREN());
-      builder.append(
-        `${index === 0 ? "" : "else "}if (${typeChecks.join(" || ")})`
-      );
+      builder.append(`${index === 0 ? "" : "else "}if (${typeChecks.join(" || ")})`);
 
       const currentName = context.identifier().getText();
       const assignment =
@@ -4036,10 +3848,7 @@ export class FileProcessor {
     }
 
     if (context.localVariableDeclaration()) {
-      this.processLocalVariableDeclaration(
-        builder,
-        context.localVariableDeclaration()
-      );
+      this.processLocalVariableDeclaration(builder, context.localVariableDeclaration());
     } else {
       this.processExpressionList(builder, context.expressionList());
     }
@@ -4145,17 +3954,12 @@ export class FileProcessor {
       return false;
     }
 
-    builder.append(
-      this.getLeadingWhiteSpaces(context.getChild(0) as ParserRuleContext)
-    );
+    builder.append(this.getLeadingWhiteSpaces(context.getChild(0) as ParserRuleContext));
 
     // Only consider leading annotations and ignore those associated to square brackets (if any).
     let index = 0;
     while (context.getChild(index) instanceof AnnotationContext) {
-      this.processAnnotation(
-        builder,
-        context.getChild(index) as AnnotationContext
-      );
+      this.processAnnotation(builder, context.getChild(index) as AnnotationContext);
       ++index;
     }
 
@@ -4178,10 +3982,7 @@ export class FileProcessor {
         index < context.getChildCount() &&
         context.getChild(index) instanceof AnnotationContext
       ) {
-        this.processAnnotation(
-          builder,
-          context.getChild(index) as AnnotationContext
-        );
+        this.processAnnotation(builder, context.getChild(index) as AnnotationContext);
         ++index;
       }
 
@@ -4256,10 +4057,7 @@ export class FileProcessor {
       }
 
       if (context.getChild(index) instanceof TypeArgumentsContext) {
-        this.processTypeArguments(
-          builder,
-          context.getChild(index++) as TypeArgumentsContext
-        );
+        this.processTypeArguments(builder, context.getChild(index++) as TypeArgumentsContext);
       }
 
       if (index === context.getChildCount()) {
@@ -4267,9 +4065,7 @@ export class FileProcessor {
       }
 
       if (context.getChild(index) instanceof TerminalNode) {
-        builder.append(
-          this.getLeadingWhiteSpaces(context.getChild(index++)) + "."
-        );
+        builder.append(this.getLeadingWhiteSpaces(context.getChild(index++)) + ".");
       }
 
       if (index === context.getChildCount()) {
@@ -4447,9 +4243,7 @@ export class FileProcessor {
       if (member.type === MemberType.Initializer) {
         // If there's still instance initializer code in the list then it means we have no explicit constructor
         // declaration. So, add one here.
-        builder.append(
-          `\npublic constructor() {\n\tsuper();\n${member.bodyContent.toString()}\n}`
-        );
+        builder.append(`\npublic constructor() {\n\tsuper();\n${member.bodyContent.toString()}\n}`);
       } else {
         builder.append(member.leadingWhitespace);
         builder.append(this.createModifierString(member.modifiers));
@@ -4534,8 +4328,7 @@ export class FileProcessor {
         });
 
         let implSignatureParams = "";
-        const maxParamCount = (overloads[overloads.length - 1].signature ?? [])
-          .length;
+        const maxParamCount = (overloads[overloads.length - 1].signature ?? []).length;
         if (maxParamCount > 0) {
           implSignatureParams = "...args: unknown[]";
         }
@@ -4545,9 +4338,7 @@ export class FileProcessor {
         // check its type.
         const modifier = this.createModifierString(member.modifiers);
         if (member.type === MemberType.Constructor) {
-          builder.append(
-            `\n    ${modifier} constructor(${implSignatureParams}) {\n`
-          );
+          builder.append(`\n    ${modifier} constructor(${implSignatureParams}) {\n`);
         } else {
           const combinedReturnTypeString = Array.from(returnTypes).join(" | ");
           builder.append(
@@ -4570,9 +4361,7 @@ export class FileProcessor {
         });
 
         // If any parameter count has multiple overloads, we need type checking
-        const needsTypeChecking = Array.from(
-          overloadsByParamCount.values()
-        ).some((group) => {
+        const needsTypeChecking = Array.from(overloadsByParamCount.values()).some((group) => {
           return group.length > 1;
         });
 
@@ -4582,129 +4371,117 @@ export class FileProcessor {
           builder.append("\t\tswitch (args.length) {\n");
 
           // Process each parameter count group
-          Array.from(overloadsByParamCount.entries()).forEach(
-            ([paramCount, group]) => {
-              builder.append(`\t\t\tcase ${paramCount}: {\n`);
+          Array.from(overloadsByParamCount.entries()).forEach(([paramCount, group]) => {
+            builder.append(`\t\t\tcase ${paramCount}: {\n`);
 
-              if (group.length === 1) {
-                // Only one overload with this parameter count, no type checking needed
-                const overload = group[0];
-                if (paramCount > 0) {
-                  builder.append("\t\t\t\tconst [");
-                  let typeString = "";
-                  overload.signature?.forEach((param, index) => {
-                    if (index > 0) {
-                      builder.append(", ");
-                      typeString += ", ";
-                    }
-                    builder.append(param.name);
-                    typeString += param.type;
-                  });
-                  builder.append(`] = args as [${typeString}];\n\n`);
-                }
-
-                let content = `${overload.bodyContent}`; // Convert to string.
-                content = content.trim();
-                builder.append(content.substring(1, content.length - 1)); // Remove the curly braces.
-                builder.append(`\n\n\t\t\t\tbreak;\n\t\t\t}\n\n`);
-              } else {
-                // Multiple overloads with same parameter count, need type checking
-                if (paramCount > 0) {
-                  // Extract parameters with generic names
-                  builder.append("\t\t\t\tconst [");
-                  for (let i = 0; i < paramCount; i++) {
-                    if (i > 0) {
-                      builder.append(", ");
-                    }
-                    builder.append(`arg${i}`);
+            if (group.length === 1) {
+              // Only one overload with this parameter count, no type checking needed
+              const overload = group[0];
+              if (paramCount > 0) {
+                builder.append("\t\t\t\tconst [");
+                let typeString = "";
+                overload.signature?.forEach((param, index) => {
+                  if (index > 0) {
+                    builder.append(", ");
+                    typeString += ", ";
                   }
-                  builder.append("] = args;\n\n");
+                  builder.append(param.name);
+                  typeString += param.type;
+                });
+                builder.append(`] = args as [${typeString}];\n\n`);
+              }
 
-                  // Type checking for each overload
-                  group.forEach((overload, index) => {
-                    const conditions: string[] = [];
-                    overload.signature?.forEach((param, paramIndex) => {
-                      // Create appropriate type check based on parameter type
-                      let typeCheck: string;
-                      const paramType = param.type.toLowerCase();
+              let content = `${overload.bodyContent}`; // Convert to string.
+              content = content.trim();
+              builder.append(content.substring(1, content.length - 1)); // Remove the curly braces.
+              builder.append(`\n\n\t\t\t\tbreak;\n\t\t\t}\n\n`);
+            } else {
+              // Multiple overloads with same parameter count, need type checking
+              if (paramCount > 0) {
+                // Extract parameters with generic names
+                builder.append("\t\t\t\tconst [");
+                for (let i = 0; i < paramCount; i++) {
+                  if (i > 0) {
+                    builder.append(", ");
+                  }
+                  builder.append(`arg${i}`);
+                }
+                builder.append("] = args;\n\n");
 
-                      if (paramType.includes("string")) {
-                        typeCheck = `typeof arg${paramIndex} === "string"`;
-                      } else if (
-                        paramType.includes("number") ||
-                        paramType.includes("int") ||
-                        paramType.includes("float") ||
-                        paramType.includes("double")
-                      ) {
-                        typeCheck = `typeof arg${paramIndex} === "number"`;
-                      } else if (paramType.includes("boolean")) {
-                        typeCheck = `typeof arg${paramIndex} === "boolean"`;
-                      } else if (paramType.includes("bigint")) {
-                        typeCheck = `typeof arg${paramIndex} === "bigint"`;
-                      } else if (
-                        paramType.includes("[]") ||
-                        paramType.includes("array")
-                      ) {
-                        typeCheck = `Array.isArray(arg${paramIndex})`;
-                      } else if (paramType.includes("object")) {
-                        typeCheck = `typeof arg${paramIndex} === "object" && arg${paramIndex} !== null`;
-                      } else if (
-                        paramType.includes("any") ||
-                        paramType.includes("unknown")
-                      ) {
-                        typeCheck = `true /* any type */`;
-                      } else {
-                        // For complex types, try instanceof check but handle potential errors
-                        typeCheck =
-                          `(typeof arg${paramIndex} === "object" && arg${paramIndex} !== null && ` +
-                          `(function() { try { return arg${paramIndex} instanceof ${param.type
-                            .split("|")[0]
-                            .trim()}; } ` +
-                          `catch(e) { return false; } })())`;
-                      }
-                      conditions.push(typeCheck);
-                    });
+                // Type checking for each overload
+                group.forEach((overload, index) => {
+                  const conditions: string[] = [];
+                  overload.signature?.forEach((param, paramIndex) => {
+                    // Create appropriate type check based on parameter type
+                    let typeCheck: string;
+                    const paramType = param.type.toLowerCase();
 
-                    const condition = conditions.join(" && ");
-                    const prefix = index === 0 ? "if" : "else if";
-
-                    builder.append(`\t\t\t\t${prefix} (${condition}) {\n`);
-
-                    // Map generic arg names to the specific parameter names
-                    const paramMappings: string[] = [];
-                    overload.signature?.forEach((param, paramIndex) => {
-                      paramMappings.push(
-                        `const ${param.name} = arg${paramIndex} as ${param.type};`
-                      );
-                    });
-
-                    if (paramMappings.length > 0) {
-                      builder.append(
-                        `\t\t\t\t\t${paramMappings.join("\n\t\t\t\t\t")}\n\n`
-                      );
+                    if (paramType.includes("string")) {
+                      typeCheck = `typeof arg${paramIndex} === "string"`;
+                    } else if (
+                      paramType.includes("number") ||
+                      paramType.includes("int") ||
+                      paramType.includes("float") ||
+                      paramType.includes("double")
+                    ) {
+                      typeCheck = `typeof arg${paramIndex} === "number"`;
+                    } else if (paramType.includes("boolean")) {
+                      typeCheck = `typeof arg${paramIndex} === "boolean"`;
+                    } else if (paramType.includes("bigint")) {
+                      typeCheck = `typeof arg${paramIndex} === "bigint"`;
+                    } else if (paramType.includes("[]") || paramType.includes("array")) {
+                      typeCheck = `Array.isArray(arg${paramIndex})`;
+                    } else if (paramType.includes("object")) {
+                      typeCheck = `typeof arg${paramIndex} === "object" && arg${paramIndex} !== null`;
+                    } else if (paramType.includes("any") || paramType.includes("unknown")) {
+                      typeCheck = `true /* any type */`;
+                    } else {
+                      // For complex types, try instanceof check but handle potential errors
+                      typeCheck =
+                        `(typeof arg${paramIndex} === "object" && arg${paramIndex} !== null && ` +
+                        `(function() { try { return arg${paramIndex} instanceof ${param.type
+                          .split("|")[0]
+                          .trim()}; } ` +
+                        `catch(e) { return false; } })())`;
                     }
-
-                    let content = `${overload.bodyContent}`; // Convert to string.
-                    content = content.trim();
-                    builder.append(
-                      `\t\t\t\t\t${content
-                        .substring(1, content.length - 1)
-                        .replace(/\n/g, "\n\t\t\t\t\t")}\n`
-                    );
-                    builder.append(`\t\t\t\t}\n`);
+                    conditions.push(typeCheck);
                   });
 
-                  // Add else clause for type mismatch
-                  builder.append(`\t\t\t\telse {\n`);
+                  const condition = conditions.join(" && ");
+                  const prefix = index === 0 ? "if" : "else if";
+
+                  builder.append(`\t\t\t\t${prefix} (${condition}) {\n`);
+
+                  // Map generic arg names to the specific parameter names
+                  const paramMappings: string[] = [];
+                  overload.signature?.forEach((param, paramIndex) => {
+                    paramMappings.push(`const ${param.name} = arg${paramIndex} as ${param.type};`);
+                  });
+
+                  if (paramMappings.length > 0) {
+                    builder.append(`\t\t\t\t\t${paramMappings.join("\n\t\t\t\t\t")}\n\n`);
+                  }
+
+                  let content = `${overload.bodyContent}`; // Convert to string.
+                  content = content.trim();
                   builder.append(
-                    `\t\t\t\t\tthrow new Error("No overload matches this parameter type combination");\n`
+                    `\t\t\t\t\t${content
+                      .substring(1, content.length - 1)
+                      .replace(/\n/g, "\n\t\t\t\t\t")}\n`
                   );
                   builder.append(`\t\t\t\t}\n`);
-                }
-                builder.append(`\t\t\t\tbreak;\n\t\t\t}\n\n`);
+                });
+
+                // Add else clause for type mismatch
+                builder.append(`\t\t\t\telse {\n`);
+                builder.append(
+                  `\t\t\t\t\tthrow new Error("No overload matches this parameter type combination");\n`
+                );
+                builder.append(`\t\t\t\t}\n`);
               }
+              builder.append(`\t\t\t\tbreak;\n\t\t\t}\n\n`);
             }
-          );
+          });
 
           builder.append("\t\t\tdefault: {\n\t\t\t\t");
           builder.append('throw new Error("Invalid number of arguments");\n');
@@ -4716,9 +4493,7 @@ export class FileProcessor {
 
           // Add the body code for each overload, depending on the overload parameters.
           overloads.forEach((overload) => {
-            builder.append(
-              `\t\t\tcase ${overload.signature?.length ?? 0}: {\n`
-            );
+            builder.append(`\t\t\tcase ${overload.signature?.length ?? 0}: {\n`);
             if ((overload.signature?.length ?? 0) > 0) {
               builder.append("\t\t\t\tconst [");
               let typeString = "";
@@ -4786,8 +4561,7 @@ export class FileProcessor {
     builder: java.lang.StringBuilder,
     statement: StatementContext
   ): void => {
-    const addBraces =
-      !statement.block() && this.configuration.options?.autoAddBraces;
+    const addBraces = !statement.block() && this.configuration.options?.autoAddBraces;
 
     if (addBraces) {
       builder.append(" {\n");
@@ -4894,12 +4668,9 @@ export class FileProcessor {
       return;
     }
 
-    const startIndex =
-      start instanceof TerminalNode ? start.symbol.start : start.start!.start;
+    const startIndex = start instanceof TerminalNode ? start.symbol.start : start.start!.start;
     const stopIndex =
-      stop instanceof TerminalNode
-        ? stop.symbol.stop
-        : stop.stop?.stop ?? startIndex;
+      stop instanceof TerminalNode ? stop.symbol.stop : stop.stop?.stop ?? startIndex;
     const interval = Interval.of(startIndex, stopIndex);
 
     const ws = this.getLeadingWhiteSpaces(start);
@@ -4917,16 +4688,12 @@ export class FileProcessor {
    *
    * @returns The new namespace declaration.
    */
-  private processNestedContent = (
-    doExport: boolean
-  ): java.lang.StringBuilder => {
+  private processNestedContent = (doExport: boolean): java.lang.StringBuilder => {
     const result = new java.lang.StringBuilder();
     const classInfo = this.typeStack.pop();
     if (classInfo && classInfo.deferredDeclarations.length() > 0) {
       result.append("\n\n");
-      result.append(
-        "// eslint-disable-next-line @typescript-eslint/no-namespace, no-redeclare\n"
-      );
+      result.append("// eslint-disable-next-line @typescript-eslint/no-namespace, no-redeclare\n");
       result.append((doExport ? "export " : "") + "namespace ");
       result.append(classInfo.name ?? "unknown");
       result.append(" {\n");
@@ -4950,10 +4717,7 @@ export class FileProcessor {
    *
    * @returns Either a replacement for the given name or the name itself.
    */
-  private resolveType = (
-    context: ParseTree | null,
-    name: string
-  ): ISymbolInfo | string => {
+  private resolveType = (context: ParseTree | null, name: string): ISymbolInfo | string => {
     if (!context) {
       return name;
     }
@@ -4977,10 +4741,7 @@ export class FileProcessor {
     if (info) {
       // If the resolved symbol is a class from a different package continue resolving to handle
       // imports properly.
-      if (
-        !(info.symbol instanceof ClassSymbol) ||
-        info.qualifiedName !== info.symbol.name
-      ) {
+      if (!(info.symbol instanceof ClassSymbol) || info.qualifiedName !== info.symbol.name) {
         return info;
       }
     }
