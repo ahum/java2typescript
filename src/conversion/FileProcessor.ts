@@ -1145,7 +1145,7 @@ export class FileProcessor {
     const firstChild = context.getChild(0) as ParserRuleContext;
     switch (firstChild.ruleIndex) {
       case JavaParser.RULE_jsniMethodDeclaration: {
-        const details = this.processJsniMethodDeclaration(context.methodDeclaration());
+        const details = this.processJsniMethodDeclaration(firstChild as JsniMethodDeclarationContext);
         if (details) {
           details.leadingWhitespace = prefix;
           if (this.overridesMethod(context, details)) {
