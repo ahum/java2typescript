@@ -1409,6 +1409,9 @@ export class FileProcessor {
       const commentText = jsniComment.getText();
       // Extract the JavaScript code from the JSNI comment (remove the comment markers)
       const jsCode = commentText.substring(4, commentText.length - 4).trim();
+      
+      // Ignore the original JSNI comment to prevent it from being included twice
+      this.ignoreContent(jsniComment);
 
       // Add the JavaScript code as the method body
       result.bodyContent.append(" {\n");
@@ -1420,8 +1423,6 @@ export class FileProcessor {
       // If no JSNI comment is found, add an empty method body
       result.bodyContent.append(" {\n  // Missing JSNI implementation\n}");
     }
-    const o = result.bodyContent.toString().valueOf();
-    console.log(o);
 
     return result;
   };
