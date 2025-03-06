@@ -278,7 +278,8 @@ describe("Fixtures Tests", () => {
     //    "./tests/conversion/fixtures/java/OverloadTest.java",
     //    "./tests/conversion/fixtures/java/PrivateObject.java",
     //     "./tests/conversion/fixtures/java/RootPanel.java",
-    "./tests/conversion/fixtures/java/Cookies.java",
+    // "./tests/conversion/fixtures/java/Cookies.java",
+    "./tests/conversion/fixtures/java/JsniCreatorMap.java",
   ];
 
   test.each(files)("Converts %s correctly", async (javaFile) => {
