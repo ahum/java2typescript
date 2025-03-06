@@ -1144,7 +1144,7 @@ export class FileProcessor {
 
     const firstChild = context.getChild(0) as ParserRuleContext;
     console.log(firstChild.ruleIndex);
-    console.log(firstChild);
+    // console.log(firstChild);
     switch (firstChild.ruleIndex) {
       case JavaParser.RULE_jsniMethodDeclaration: {
         const details = this.processJsniMethodDeclaration(
@@ -1408,7 +1408,7 @@ export class FileProcessor {
     if (jsniComment) {
       const commentText = jsniComment.getText();
       // Extract the JavaScript code from the JSNI comment (remove the comment markers)
-      const jsCode = commentText.substring(2, commentText.length - 2).trim();
+      const jsCode = commentText.substring(4, commentText.length - 4).trim();
 
       // Add the JavaScript code as the method body
       result.bodyContent.append(" {\n");
@@ -1420,6 +1420,8 @@ export class FileProcessor {
       // If no JSNI comment is found, add an empty method body
       result.bodyContent.append(" {\n  // Missing JSNI implementation\n}");
     }
+    const o = result.bodyContent.toString().valueOf();
+    console.log(o);
 
     return result;
   };
