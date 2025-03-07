@@ -161,7 +161,7 @@ methodDeclaration:
 
 // JavaScript Native Interface method declaration
 jsniMethodDeclaration:
-    modifier* typeTypeOrVoid identifier formalParameters ('[' ']')* (THROWS qualifiedNameList)? JSNI_COMMENT
+    modifier* typeParameters? typeTypeOrVoid identifier formalParameters ('[' ']')* (THROWS qualifiedNameList)? JSNI_COMMENT
 ;
 
 methodBody:
